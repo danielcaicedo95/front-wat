@@ -1,9 +1,10 @@
 // src/components/notifications/NotificationBell.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { createClient } from "@supabase/supabase-js";
+import { playCoinSound } from "@/lib/coinSound";
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,6 +26,8 @@ export default function NotificationBell() {
     const [open, setOpen] = useState(false);
     const [showInstallBanner, setShowInstallBanner] = useState(false);
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    // Para desbloquear el AudioContext en el primer clic del usuario
+    const audioUnlocked = useRef(false);
 
     // Escuchar el evento de instalación de PWA
     useEffect(() => {
@@ -35,6 +38,31 @@ export default function NotificationBell() {
         };
         window.addEventListener("beforeinstallprompt", handler);
         return () => window.removeEventListener("beforeinstallprompt", handler);
+    }, []);
+
+    // Desbloquear AudioContext en el primer clic (requerido por navegadores)
+    useEffect(() => {
+        const unlock = () => {
+            if (!audioUnlocked.current) {
+                audioUnlocked.current = true;
+                // Reproducir silencio para desbloquear el contexto de audio
+                playCoinSound(0.001);
+            }
+        };
+        document.addEventListener("click", unlock, { once: true });
+        return () => document.removeEventListener("click", unlock);
+    }, []);
+
+    // Escuchar mensajes del service worker (push llegó con la app en background)
+    useEffect(() => {
+        const handleSWMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'SALE_SOUND') {
+                playCoinSound(0.7);
+                setUnreadCount(prev => prev + 1);
+            }
+        };
+        navigator.serviceWorker?.addEventListener('message', handleSWMessage);
+        return () => navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
     }, []);
 
     const installApp = async () => {
@@ -80,10 +108,11 @@ export default function NotificationBell() {
                     setRecentOrders((prev) => [newOrder, ...prev].slice(0, 10));
                     setUnreadCount((prev) => prev + 1);
 
-                    // Notificación sonora/visual si el panel está abierto
-                    const audio = new Audio("/notification.mp3");
-                    audio.volume = 0.4;
-                    audio.play().catch(() => { }); // Ignorar si el navegador bloquea el audio
+                    // 🪙 Sonido de moneda sintetizado + vibración en móvil
+                    playCoinSound(0.7);
+                    if ('vibrate' in navigator) {
+                        navigator.vibrate([100, 50, 200, 50, 100]);
+                    }
                 }
             )
             .subscribe();
