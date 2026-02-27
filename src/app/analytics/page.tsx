@@ -134,7 +134,7 @@ export default function AnalyticsPage() {
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={v => v?.slice(5) || ''} />
                                     <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                                    <Tooltip formatter={(v: number) => formatCOP(v)} labelFormatter={l => `Fecha: ${l}`} />
+                                    <Tooltip formatter={(v: number | undefined) => formatCOP(v ?? 0)} labelFormatter={l => `Fecha: ${l}`} />
                                     <Line type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2} dot={false} />
                                 </LineChart>
                             </ResponsiveContainer>
@@ -178,7 +178,7 @@ export default function AnalyticsPage() {
                                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                         <XAxis type="number" tick={{ fontSize: 11 }} />
                                         <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={120} />
-                                        <Tooltip formatter={(v: number) => [`${v} unidades`, 'Vendidas']} />
+                                        <Tooltip formatter={(v: number | undefined) => [`${v ?? 0} unidades`, 'Vendidas']} />
                                         <Bar dataKey="units_sold" radius={[0, 4, 4, 0]}>
                                             {topProducts.map((_, i) => (
                                                 <Cell key={i} fill={FUNNEL_COLORS[i % FUNNEL_COLORS.length]} />
