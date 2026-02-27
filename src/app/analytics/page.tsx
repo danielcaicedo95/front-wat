@@ -18,8 +18,8 @@ interface FailedSearch { query: string; frequency: number; }
 
 const FUNNEL_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#ef4444', '#10b981'];
 
-function formatCOP(n: number) {
-    return `$${n.toLocaleString('es-CO')}`;
+function formatCOP(n: number | undefined | null) {
+    return `$${(n ?? 0).toLocaleString('es-CO')}`;
 }
 
 function KpiCard({ label, value, sub, icon }: { label: string; value: string; sub?: string; icon: string }) {
@@ -126,7 +126,7 @@ export default function AnalyticsPage() {
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <h2 className="font-semibold text-gray-800">Ingresos — últimos {days} días</h2>
-                                    <p className="text-xs text-gray-400">{formatCOP(revenue.total)} total · {revenue.total_orders} pedidos · ticket promedio {formatCOP(revenue.avg_order_value)}</p>
+                                    <p className="text-xs text-gray-400">{formatCOP(revenue?.total)} total · {revenue?.total_orders ?? 0} pedidos · ticket promedio {formatCOP(revenue?.avg_order_value)}</p>
                                 </div>
                             </div>
                             <ResponsiveContainer width="100%" height={200}>
@@ -150,7 +150,7 @@ export default function AnalyticsPage() {
                                         <div key={step.step}>
                                             <div className="flex justify-between text-xs text-gray-500 mb-0.5">
                                                 <span>{step.label}</span>
-                                                <span className="font-medium text-gray-700">{step.count.toLocaleString()}{step.conversion_from_prev !== undefined && ` · ${step.conversion_from_prev}% desde anterior`}</span>
+                                                <span className="font-medium text-gray-700">{(step.count ?? 0).toLocaleString()}{step.conversion_from_prev !== undefined && ` · ${step.conversion_from_prev}% desde anterior`}</span>
                                             </div>
                                             <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
                                                 <div
@@ -255,7 +255,7 @@ export default function AnalyticsPage() {
                                                 </span>
                                             </td>
                                             <td className="py-2 text-right">{c.order_count}</td>
-                                            <td className="py-2 text-right font-semibold">{formatCOP(c.total_spent)}</td>
+                                            <td className="py-2 text-right font-semibold">{formatCOP(c.total_spent ?? 0)}</td>
                                             <td className="py-2 text-right text-gray-400 text-xs">{c.last_order?.slice(0, 10)}</td>
                                         </tr>
                                     ))}
