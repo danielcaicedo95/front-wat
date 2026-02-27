@@ -11,8 +11,10 @@ const navLinks = [
   { name: 'Inventory', href: '/inventory' },
   { name: 'Messages', href: '/messages' },
   { name: 'Analytics', href: '/analytics' },
+  { name: '🔔 Notificaciones', href: '/notifications' },
   { name: 'Settings', href: '/settings' },
 ];
+
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -43,11 +45,10 @@ export default function Sidebar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`p-2 rounded-md text-sm font-medium transition-colors ${
-                pathname === link.href
+              className={`p-2 rounded-md text-sm font-medium transition-colors ${pathname === link.href
                   ? 'bg-blue-600 text-white'
                   : 'text-gray-700 hover:bg-gray-100'
-              }`}
+                }`}
               onClick={() => setIsOpen(false)} // Close on mobile nav
             >
               {link.name}
