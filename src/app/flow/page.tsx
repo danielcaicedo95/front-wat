@@ -341,6 +341,7 @@ export default function FlowBuilderPage() {
     const [available, setAvailable] = useState<AvailableModule[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [syncing, setSyncing] = useState(false);
     const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
     const TENANT_ID = 'default';
 
@@ -438,6 +439,27 @@ export default function FlowBuilderPage() {
         }
     };
 
+    const handleSync = async () => {
+        setSyncing(true);
+        setFeedback(null);
+        try {
+            const res = await fetch(`${API_BASE}/api/settings/sync-meta-catalog`, {
+                method: 'POST',
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setFeedback({ type: 'success', msg: data.message ?? '✅ Sincronización completada' });
+            } else {
+                setFeedback({ type: 'error', msg: `❌ ${data.detail ?? 'Error al sincronizar'}` });
+            }
+        } catch {
+            setFeedback({ type: 'error', msg: '❌ Error de conexión al sincronizar.' });
+        } finally {
+            setSyncing(false);
+            setTimeout(() => setFeedback(null), 6000);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -477,6 +499,20 @@ export default function FlowBuilderPage() {
                             {feedback.msg}
                         </p>
                     )}
+                    <button
+                        onClick={handleSync}
+                        disabled={syncing || saving}
+                        className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {syncing ? (
+                            <>
+                                <span className="animate-spin h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full" />
+                                Sincronizando...
+                            </>
+                        ) : (
+                            '🔄 Sincronizar catálogo'
+                        )}
+                    </button>
                     <button
                         onClick={handleSave}
                         disabled={saving}
