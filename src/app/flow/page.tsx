@@ -190,13 +190,14 @@ function ConfigField({
     }
 
     if (field.type === 'select') {
+        const currentOption = (field.options ?? []).find(o => o.value === (value as string ?? field.default));
         return (
             <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">{field.label}</label>
                 <select
                     value={(value as string) ?? (field.default as string) ?? ''}
                     onChange={(e) => onChange(e.target.value)}
-                    className={`${inputClass} bg-white`}
+                    className={`${inputClass} bg-white cursor-pointer`}
                 >
                     {(field.options ?? []).map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -204,6 +205,9 @@ function ConfigField({
                         </option>
                     ))}
                 </select>
+                {currentOption && (
+                    <p className="text-xs text-indigo-600 mt-1 font-medium">✓ Modo activo: {currentOption.label}</p>
+                )}
                 {field.help && <p className="text-xs text-gray-400 mt-1">{field.help}</p>}
             </div>
         );
@@ -280,10 +284,12 @@ function FlowCard({
                 </div>
 
                 {/* Icon + name */}
-                <span className="text-2xl">{mod.icon ?? '⚙️'}</span>
+                <span className="text-2xl flex-shrink-0">{mod.icon ?? '⚙️'}</span>
                 <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm truncate">{mod.name ?? mod.module_id}</p>
-                    <p className="text-xs text-gray-400 truncate">{mod.description ?? ''}</p>
+                    <p className="font-semibold text-gray-900 text-sm">{mod.name ?? mod.module_id}</p>
+                    {!expanded && (
+                        <p className="text-xs text-gray-400 line-clamp-1">{mod.description ?? ''}</p>
+                    )}
                 </div>
 
                 {/* Actions */}
@@ -312,6 +318,8 @@ function FlowCard({
             {/* Config panel */}
             {expanded && schema.length > 0 && (
                 <div className="border-t border-gray-100 p-4 space-y-4 bg-gray-50 rounded-b-xl">
+                    <p className="text-xs text-gray-500 leading-relaxed">{mod.description}</p>
+                    <hr className="border-gray-200" />
                     {schema.map((f) => (
                         <ConfigField
                             key={f.key}
