@@ -9,7 +9,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 interface ConfigSchemaField {
     key: string;
     label: string;
-    type: 'text' | 'textarea' | 'number' | 'boolean' | 'multiselect' | 'tags';
+    type: 'text' | 'textarea' | 'number' | 'boolean' | 'multiselect' | 'tags' | 'select';
     default: unknown;
     options?: { value: string; label: string }[];
     min?: number;
@@ -185,6 +185,26 @@ function ConfigField({
                     }}
                     className={inputClass}
                 />
+            </div>
+        );
+    }
+
+    if (field.type === 'select') {
+        return (
+            <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{field.label}</label>
+                <select
+                    value={(value as string) ?? (field.default as string) ?? ''}
+                    onChange={(e) => onChange(e.target.value)}
+                    className={`${inputClass} bg-white`}
+                >
+                    {(field.options ?? []).map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                        </option>
+                    ))}
+                </select>
+                {field.help && <p className="text-xs text-gray-400 mt-1">{field.help}</p>}
             </div>
         );
     }
