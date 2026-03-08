@@ -71,22 +71,6 @@ function ConfigField({
     const inputClass =
         'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400';
 
-    if (field.type === 'boolean') {
-        return (
-            <label className="flex items-center gap-3 cursor-pointer">
-                <div
-                    onClick={() => onChange(!value)}
-                    className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 cursor-pointer ${value ? 'bg-indigo-500' : 'bg-gray-300'}`}
-                >
-                    <div
-                        className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${value ? 'translate-x-5' : 'translate-x-0.5'}`}
-                    />
-                </div>
-                <span className="text-sm text-gray-700">{field.label}</span>
-            </label>
-        );
-    }
-
     if (field.type === 'textarea') {
         return (
             <div>
@@ -223,8 +207,8 @@ function ConfigField({
                                 type="button"
                                 onClick={() => onChange(opt.value)}
                                 className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all duration-150 ${isActive
-                                        ? 'border-indigo-500 bg-indigo-50 shadow-sm'
-                                        : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/40'
+                                    ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                                    : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/40'
                                     }`}
                             >
                                 <span className="text-xl flex-shrink-0">{opt.label.split(' ')[0]}</span>
