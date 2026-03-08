@@ -11,11 +11,12 @@ interface ConfigSchemaField {
     label: string;
     type: 'text' | 'textarea' | 'number' | 'boolean' | 'multiselect' | 'tags' | 'select';
     default: unknown;
-    options?: { value: string; label: string }[];
+    options?: { value: string; label: string; description?: string }[];
     min?: number;
     max?: number;
     maxLength?: number;
     help?: string;
+    visible_when?: { key: string; value: unknown }; // conditional visibility
 }
 
 interface AvailableModule {
@@ -209,25 +210,40 @@ function ConfigField({
     }
 
     if (field.type === 'select') {
-        const currentOption = (field.options ?? []).find(o => o.value === (value as string ?? field.default));
+        const currentVal = (value as string) ?? (field.default as string) ?? '';
         return (
             <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{field.label}</label>
-                <select
-                    value={(value as string) ?? (field.default as string) ?? ''}
-                    onChange={(e) => onChange(e.target.value)}
-                    className={`${inputClass} bg-white cursor-pointer`}
-                >
-                    {(field.options ?? []).map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                        </option>
-                    ))}
-                </select>
-                {currentOption && (
-                    <p className="text-xs text-indigo-600 mt-1 font-medium">✓ Modo activo: {currentOption.label}</p>
-                )}
-                {field.help && <p className="text-xs text-gray-400 mt-1">{field.help}</p>}
+                <label className="block text-xs font-semibold text-gray-700 mb-2">{field.label}</label>
+                <div className="grid grid-cols-1 gap-2">
+                    {(field.options ?? []).map((opt) => {
+                        const isActive = currentVal === opt.value;
+                        return (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => onChange(opt.value)}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all duration-150 ${isActive
+                                        ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                                        : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/40'
+                                    }`}
+                            >
+                                <span className="text-xl flex-shrink-0">{opt.label.split(' ')[0]}</span>
+                                <div className="flex-1 min-w-0">
+                                    <p className={`text-sm font-medium leading-tight ${isActive ? 'text-indigo-700' : 'text-gray-700'}`}>
+                                        {opt.label.split(' ').slice(1).join(' ')}
+                                    </p>
+                                    {opt.description && (
+                                        <p className="text-xs text-gray-400 mt-0.5">{opt.description}</p>
+                                    )}
+                                </div>
+                                {isActive && (
+                                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs">✓</span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+                {field.help && <p className="text-xs text-gray-400 mt-2">{field.help}</p>}
             </div>
         );
     }
@@ -336,17 +352,32 @@ function FlowCard({
 
             {/* Config panel */}
             {expanded && schema.length > 0 && (
-                <div className="border-t border-gray-100 p-4 space-y-4 bg-gray-50 rounded-b-xl">
-                    <p className="text-xs text-gray-500 leading-relaxed">{mod.description}</p>
-                    <hr className="border-gray-200" />
-                    {schema.map((f) => (
-                        <ConfigField
-                            key={f.key}
-                            field={f}
-                            value={mod.config[f.key] ?? f.default}
-                            onChange={(val) => onConfigChange(f.key, val)}
-                        />
-                    ))}
+                <div className="border-t border-indigo-100 bg-gradient-to-b from-indigo-50/60 to-gray-50 rounded-b-xl">
+                    {/* Section header */}
+                    <div className="flex items-center gap-2 px-4 pt-4 pb-3">
+                        <span className="text-lg">{mod.icon ?? '⚙️'}</span>
+                        <div>
+                            <p className="text-xs font-bold text-indigo-700 uppercase tracking-wide">Configuración — {mod.name}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{mod.description}</p>
+                        </div>
+                    </div>
+                    <hr className="border-indigo-100 mx-4" />
+                    <div className="px-4 py-4 space-y-5">
+                        {schema
+                            .filter((f) => {
+                                if (!f.visible_when) return true;
+                                const depVal = mod.config[f.visible_when.key] ?? schema.find(s => s.key === f.visible_when!.key)?.default;
+                                return depVal === f.visible_when.value;
+                            })
+                            .map((f) => (
+                                <ConfigField
+                                    key={f.key}
+                                    field={f}
+                                    value={mod.config[f.key] ?? f.default}
+                                    onChange={(val) => onConfigChange(f.key, val)}
+                                />
+                            ))}
+                    </div>
                 </div>
             )}
         </div>
