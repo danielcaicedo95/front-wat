@@ -57,6 +57,13 @@ const CATEGORY_LABELS: Record<string, string> = {
     custom: 'Personalizado',
 };
 
+// ─── Client-side field visibility rules ───────────────────────────────────────
+// Key format: "moduleId.fieldKey" → { dependsOn: fieldKey, showWhen: value }
+// This works even if the backend doesn't return visible_when in config_schema.
+const FIELD_VISIBILITY: Record<string, { dependsOn: string; showWhen: unknown }> = {
+    'cart.disambiguation_mode': { dependsOn: 'ask_variants', showWhen: true },
+};
+
 // ─── Config field renderer ─────────────────────────────────────────────────────
 
 function ConfigField({
@@ -347,20 +354,36 @@ function FlowCard({
                     </div>
                     <hr className="border-indigo-100 mx-4" />
                     <div className="px-4 py-4 space-y-5">
-                        {schema
-                            .filter((f) => {
-                                if (!f.visible_when) return true;
-                                const depVal = mod.config[f.visible_when.key] ?? schema.find(s => s.key === f.visible_when!.key)?.default;
-                                return depVal === f.visible_when.value;
-                            })
-                            .map((f) => (
-                                <ConfigField
-                                    key={f.key}
-                                    field={f}
-                                    value={mod.config[f.key] ?? f.default}
-                                    onChange={(val) => onConfigChange(f.key, val)}
-                                />
-                            ))}
+                        {(() => {
+                            // Build a live config map: schema defaults merged with current mod.config
+                            // This ensures visible_when works even before the user saves
+                            const liveConfig: Record<string, unknown> = {};
+                            schema.forEach((f) => { liveConfig[f.key] = f.default; });
+                            Object.assign(liveConfig, mod.config);
+
+                            return schema
+                                .filter((f) => {
+                                    // Check API-provided visible_when first
+                                    const apiRule = f.visible_when;
+                                    if (apiRule) {
+                                        return liveConfig[apiRule.key] === apiRule.value;
+                                    }
+                                    // Fallback: client-side FIELD_VISIBILITY rules
+                                    const clientRule = FIELD_VISIBILITY[`${mod.module_id}.${f.key}`];
+                                    if (clientRule) {
+                                        return liveConfig[clientRule.dependsOn] === clientRule.showWhen;
+                                    }
+                                    return true;
+                                })
+                                .map((f) => (
+                                    <ConfigField
+                                        key={f.key}
+                                        field={f}
+                                        value={liveConfig[f.key]}
+                                        onChange={(val) => onConfigChange(f.key, val)}
+                                    />
+                                ));
+                        })()}
                     </div>
                 </div>
             )}
