@@ -189,6 +189,25 @@ function ConfigField({
         );
     }
 
+    if (field.type === 'boolean') {
+        const checked = value !== undefined ? Boolean(value) : Boolean(field.default);
+        return (
+            <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-700">{field.label}</p>
+                    {field.help && <p className="text-xs text-gray-400 mt-0.5">{field.help}</p>}
+                </div>
+                <button
+                    type="button"
+                    onClick={() => onChange(!checked)}
+                    className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${checked ? 'bg-indigo-500' : 'bg-gray-300'}`}
+                >
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+            </div>
+        );
+    }
+
     if (field.type === 'select') {
         const currentOption = (field.options ?? []).find(o => o.value === (value as string ?? field.default));
         return (
