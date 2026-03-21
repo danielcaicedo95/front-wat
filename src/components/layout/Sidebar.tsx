@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { HiMenu } from 'react-icons/hi';
 
 const navLinks = [
-  { name: 'Dashboard', href: '/dashboard' },
+  { name: 'Home', href: '/dashboard' },
   { name: 'Sales', href: '/sales' },
   { name: 'Inventory', href: '/inventory' },
   { name: 'Messages', href: '/messages' },
