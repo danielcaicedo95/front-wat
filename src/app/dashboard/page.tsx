@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -94,9 +94,70 @@ export default function HomePage() {
   const [syncResult, setSyncResult] = useState<{ status: string; profile_text?: string; profile_photo?: string; message: string } | null>(null);
   const logoRef = useRef<HTMLInputElement>(null);
 
+  // ── Voice note module state ────────────────────────────────────────────────
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceLang, setVoiceLang]       = useState('es-CO');
+  const [voiceNotify, setVoiceNotify]   = useState(false);
+  const [voiceFlow, setVoiceFlow]       = useState<object[]>([]); // full flow for save
+  const [voiceSaving, setVoiceSaving]   = useState(false);
+
   const showToast = (type: 'success' | 'error' | 'info', msg: string) => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 5000);
+  };
+
+  // ── Load voice_note module state ──────────────────────────────────────────
+  const loadVoiceNote = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/modules/flow?tenant_id=default`);
+      const data = await res.json();
+      const flow: object[] = data.flow ?? [];
+      setVoiceFlow(flow);
+      const vm = (flow as Array<{module_id:string; enabled:boolean; config:Record<string,unknown>}>)
+        .find((m) => m.module_id === 'voice_note');
+      if (vm) {
+        setVoiceEnabled(vm.enabled);
+        setVoiceLang((vm.config?.language as string) ?? 'es-CO');
+        setVoiceNotify((vm.config?.notify_transcription as boolean) ?? false);
+      }
+    } catch { /* silent */ }
+  }, []);
+
+  // ── Toggle voice_note active state & save immediately ──────────────────────
+  const handleVoiceToggle = async (newEnabled: boolean, newLang?: string, newNotify?: boolean) => {
+    setVoiceSaving(true);
+    try {
+      const lang    = newLang    ?? voiceLang;
+      const notify  = newNotify  ?? voiceNotify;
+      const enabled = newEnabled;
+
+      // Build updated flow – replace or add voice_note
+      const flowBase = (voiceFlow as Array<{module_id:string; enabled:boolean; position:number; config:Record<string,unknown>}>);
+      let updated = flowBase.map((m) =>
+        m.module_id === 'voice_note'
+          ? { ...m, enabled, config: { language: lang, notify_transcription: notify } }
+          : m
+      );
+      if (!updated.find((m) => m.module_id === 'voice_note')) {
+        updated = [...updated, { module_id: 'voice_note', enabled, position: updated.length + 1, config: { language: lang, notify_transcription: notify } }];
+      }
+
+      const res = await fetch(`${API_BASE}/api/modules/flow`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant_id: 'default', modules: updated }),
+      });
+      if (res.ok) {
+        setVoiceEnabled(enabled);
+        setVoiceLang(lang);
+        setVoiceNotify(notify);
+        setVoiceFlow(updated);
+        showToast('success', enabled ? '🎙️ Notas de voz activadas' : '🔇 Notas de voz desactivadas');
+      } else {
+        showToast('error', '❌ No se pudo guardar la configuración');
+      }
+    } catch { showToast('error', '❌ Error de conexión'); }
+    finally { setVoiceSaving(false); }
   };
 
   // ── Load settings ─────────────────────────────────────────────────────────
@@ -125,7 +186,8 @@ export default function HomePage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+    loadVoiceNote();
+  }, [loadVoiceNote]);
 
   const patch = (key: keyof Brand, value: string) =>
     setBrand((b) => ({ ...b, [key]: value }));
@@ -367,6 +429,108 @@ export default function HomePage() {
           <Field label="Mensaje de despedida" hint="Se envía al completar un pedido.">
             <textarea rows={2} value={brand.chatbot_farewell} onChange={(e) => patch('chatbot_farewell', e.target.value)} className={`${inp} resize-none`} placeholder="¡Gracias por tu pedido! 🎉 En breve lo procesamos." />
           </Field>
+        </div>
+
+        {/* ── Card: Funciones del Chatbot ────────────────────────────────── */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4 lg:col-span-2">
+          <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
+            <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-lg flex-shrink-0">🧩</div>
+            <div className="flex-1">
+              <h2 className="text-base font-bold text-gray-800">Funciones del Chatbot</h2>
+              <p className="text-xs text-gray-400">Activa o desactiva capacidades opcionales de tu bot</p>
+            </div>
+          </div>
+
+          {/* Voice note toggle */}
+          <div className={`flex items-start gap-4 p-4 rounded-2xl border-2 transition-all duration-200 ${
+            voiceEnabled ? 'border-violet-200 bg-violet-50' : 'border-gray-100 bg-gray-50'
+          }`}>
+            {/* Icon */}
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 transition-colors ${
+              voiceEnabled ? 'bg-violet-200' : 'bg-gray-200'
+            }`}>🎙️</div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-bold text-gray-800 text-sm">Notas de Voz</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Transcribe audios de WhatsApp con Google Gemini y los procesa como texto
+                  </p>
+                </div>
+                {/* Main toggle */}
+                <button
+                  type="button"
+                  disabled={voiceSaving}
+                  onClick={() => handleVoiceToggle(!voiceEnabled)}
+                  className={`relative flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-200 disabled:opacity-50 ${
+                    voiceEnabled ? 'bg-violet-500' : 'bg-gray-300'
+                  }`}
+                >
+                  {voiceSaving
+                    ? <div className="absolute inset-0 flex items-center justify-center"><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /></div>
+                    : <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
+                        voiceEnabled ? 'translate-x-7' : 'translate-x-1'
+                      }`} />
+                  }
+                </button>
+              </div>
+
+              {/* Sub-options (only when enabled) */}
+              {voiceEnabled && (
+                <div className="mt-3 pt-3 border-t border-violet-200 space-y-3">
+                  {/* Language selector */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-1.5">Idioma de transcripción</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { value: 'es-CO', flag: '🇨🇴', label: 'Colombia' },
+                        { value: 'es-ES', flag: '🇪🇸', label: 'España' },
+                        { value: 'es-MX', flag: '🇲🇽', label: 'México' },
+                        { value: 'en-US', flag: '🇺🇸', label: 'English' },
+                        { value: 'pt-BR', flag: '🇧🇷', label: 'Português' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          disabled={voiceSaving}
+                          onClick={() => handleVoiceToggle(true, opt.value)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                            voiceLang === opt.value
+                              ? 'border-violet-400 bg-violet-100 text-violet-700'
+                              : 'border-gray-200 bg-white text-gray-500 hover:border-violet-300'
+                          }`}
+                        >
+                          {opt.flag} {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Notify user toggle */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-700">Confirmar transcripción</p>
+                      <p className="text-xs text-gray-400">Envía «🎙️ Escuché: ...» antes de responder</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={voiceSaving}
+                      onClick={() => handleVoiceToggle(true, undefined, !voiceNotify)}
+                      className={`relative flex-shrink-0 w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${
+                        voiceNotify ? 'bg-violet-500' : 'bg-gray-300'
+                      }`}
+                    >
+                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                        voiceNotify ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
