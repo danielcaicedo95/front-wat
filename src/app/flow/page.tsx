@@ -47,6 +47,7 @@ const CATEGORY_COLORS: Record<string, string> = {
     core: 'bg-blue-100 text-blue-700',
     commerce: 'bg-green-100 text-green-700',
     compliance: 'bg-orange-100 text-orange-700',
+    checkout: 'bg-teal-100 text-teal-700',
     custom: 'bg-purple-100 text-purple-700',
 };
 
@@ -54,6 +55,7 @@ const CATEGORY_LABELS: Record<string, string> = {
     core: 'Núcleo',
     commerce: 'Comercio',
     compliance: 'Cumplimiento',
+    checkout: 'Checkout',
     custom: 'Personalizado',
 };
 
