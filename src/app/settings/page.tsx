@@ -1,22 +1,65 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 type CatalogMode = 'supabase' | 'meta' | 'hybrid';
 type Tab = 'catalog' | 'messages' | 'notifications';
+type FarewellAction = 'catalog' | 'nothing' | 'custom';
 
 interface Settings {
+  // Catálogo
   catalog_mode: CatalogMode;
+  // Age gate
   welcome_message: string;
   min_age: string;
   age_gate_question: string;
   age_yes_button: string;
   age_no_button: string;
   age_rejection_message: string;
+  // Mensajes del bot
+  msg_welcome: string;
+  msg_welcome_image_url: string;
+  msg_product_found: string;
+  msg_product_not_found: string;
+  msg_added_to_cart: string;
+  msg_invoice_footer: string;
+  msg_order_confirmed: string;
+  msg_order_confirmed_image_url: string;
+  msg_farewell_action: FarewellAction;
+  msg_farewell_custom: string;
+  msg_location_optional: string;
+  msg_location_required: string;
+  msg_location_skip_button: string;
+  msg_delivering_data_request: string;
 }
+
+const MSG_DEFAULTS: Record<string, string> = {
+  msg_welcome: '¡Hola! 👋 ¿Qué te gustaría pedir hoy?',
+  msg_product_found: 'Aquí tienes las opciones para *{{producto}}*:',
+  msg_product_not_found: 'Lo siento, no encontré *{{producto}}* en nuestro catálogo. ¿Quieres buscar otra cosa?',
+  msg_added_to_cart: '✅ *¡Agregado!* Tu carrito actualizado:',
+  msg_invoice_footer: '¡Gracias por tu pedido! 🎉 Te confirmamos en breve.',
+  msg_order_confirmed: '✅ ¡Pedido confirmado! Estamos preparando tu domicilio. 🛵',
+  msg_farewell_action: 'catalog',
+  msg_farewell_custom: '¡Gracias! Escríbenos cuando quieras pedir de nuevo 😊',
+  msg_location_optional: '📍 ¿Quieres compartir tu ubicación para facilitar la entrega? 🙂',
+  msg_location_required: '📍 Para continuar necesitas confirmar tu ubicación de entrega.',
+  msg_location_skip_button: 'Estoy en otro lugar',
+  msg_delivering_data_request: 'Para finalizar, por favor comparte tu *nombre*, *dirección*, *teléfono* y *método de pago*.',
+};
+
+// Variables disponibles por campo
+const VARS: Record<string, { label: string; key: string }[]> = {
+  msg_product_found:     [{ label: '{{producto}}', key: '{{producto}}' }],
+  msg_product_not_found: [{ label: '{{producto}}', key: '{{producto}}' }],
+  msg_added_to_cart:     [{ label: '{{producto}}', key: '{{producto}}' }, { label: '{{total}}', key: '{{total}}' }],
+  msg_invoice_footer:    [{ label: '{{nombre}}', key: '{{nombre}}' }, { label: '{{total}}', key: '{{total}}' }, { label: '{{tiempo_entrega}}', key: '{{tiempo_entrega}}' }],
+  msg_order_confirmed:   [{ label: '{{nombre}}', key: '{{nombre}}' }, { label: '{{total}}', key: '{{total}}' }],
+  msg_farewell_custom:   [{ label: '{{nombre}}', key: '{{nombre}}' }],
+};
 
 const CATALOG_MODES: { id: CatalogMode; icon: string; label: string; description: string; badge?: string }[] = [
   { id: 'supabase', icon: '🗄️', label: 'Solo Supabase', description: 'Lista interactiva con todos tus productos desde la base de datos.' },
@@ -30,7 +73,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'notifications', label: 'Notificaciones',  icon: '🔔' },
 ];
 
-const inp = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all';
+const inp = 'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all bg-white';
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -38,6 +81,125 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       <label className="block text-sm font-semibold text-gray-700 mb-1">{label}</label>
       {hint && <p className="text-xs text-gray-400 mb-1.5">{hint}</p>}
       {children}
+    </div>
+  );
+}
+
+// ── Chip de variable dinámica ─────────────────────────────────────────────────
+function VarChip({ varKey, onClick }: { varKey: string; onClick: (v: string) => void }) {
+  return (
+    <button type="button" onClick={() => onClick(varKey)}
+      className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs rounded-lg hover:bg-indigo-100 transition-colors font-mono">
+      {varKey}
+    </button>
+  );
+}
+
+// ── Campo editable con variables y reset ──────────────────────────────────────
+function MsgField({
+  label, hint, fieldKey, value, onChange, multiline = true, imageUrl, onImageChange,
+}: {
+  label: string; hint?: string; fieldKey: string; value: string;
+  onChange: (key: string, val: string) => void; multiline?: boolean;
+  imageUrl?: string; onImageChange?: (url: string) => void;
+}) {
+  const vars = VARS[fieldKey] || [];
+  const def  = MSG_DEFAULTS[fieldKey] || '';
+  const isDirty = value !== def && value !== '';
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const insertVar = (v: string) => onChange(fieldKey, (value || '') + v);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onImageChange) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append('image', file);
+      const res = await fetch(`${API_BASE}/api/settings/logo`, { method: 'POST', body: form });
+      if (res.ok) {
+        const data = await res.json();
+        onImageChange(data.url);
+      }
+    } finally { setUploading(false); }
+  };
+
+  return (
+    <div className="rounded-xl border border-gray-200 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-100">
+        <span className="text-xs font-semibold text-gray-600">{label}</span>
+        <div className="flex items-center gap-2">
+          {isDirty && (
+            <button type="button" onClick={() => onChange(fieldKey, def)}
+              className="text-xs text-gray-400 hover:text-red-500 transition-colors">↩ Restaurar</button>
+          )}
+          {isDirty && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Modificado" />}
+        </div>
+      </div>
+      {/* Input */}
+      <div className="px-3 pt-2 pb-1">
+        {hint && <p className="text-xs text-gray-400 mb-1.5">{hint}</p>}
+        {multiline ? (
+          <textarea rows={3} value={value} onChange={(e) => onChange(fieldKey, e.target.value)}
+            placeholder={def}
+            className="w-full text-sm focus:outline-none resize-none text-gray-800 placeholder:text-gray-300 bg-white" />
+        ) : (
+          <input type="text" value={value} onChange={(e) => onChange(fieldKey, e.target.value)}
+            placeholder={def}
+            className="w-full text-sm focus:outline-none text-gray-800 placeholder:text-gray-300 bg-white" />
+        )}
+      </div>
+      {/* Variables */}
+      {vars.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-3 pb-2">
+          <span className="text-xs text-gray-400 self-center">Insertar:</span>
+          {vars.map((v) => <VarChip key={v.key} varKey={v.key} onClick={insertVar} />)}
+        </div>
+      )}
+      {/* Imagen opcional */}
+      {onImageChange !== undefined && (
+        <div className="border-t border-gray-100 px-3 py-2 bg-gray-50 flex items-center gap-3">
+          {imageUrl ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imageUrl} alt="preview" className="h-10 w-10 rounded-lg object-cover border border-gray-200" />
+              <button type="button" onClick={() => onImageChange('')}
+                className="text-xs text-red-400 hover:text-red-600 transition-colors">Quitar imagen</button>
+            </>
+          ) : (
+            <button type="button" onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="text-xs text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1">
+              {uploading ? '⏳ Subiendo...' : '🖼️ Añadir imagen (opcional)'}
+            </button>
+          )}
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Sección de acordeón ───────────────────────────────────────────────────────
+function Section({ icon, title, description, children }: {
+  icon: string; title: string; description: string; children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-gray-200 rounded-2xl overflow-hidden">
+      <button type="button" onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-gray-50 transition-colors">
+        <span className="text-xl">{icon}</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-gray-800 text-sm">{title}</p>
+          <p className="text-xs text-gray-400 truncate">{description}</p>
+        </div>
+        <span className={`text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
+      </button>
+      {open && <div className="border-t border-gray-100 p-4 space-y-4 bg-white">{children}</div>}
     </div>
   );
 }
@@ -126,7 +288,33 @@ export default function SettingsPage() {
   useEffect(() => {
     fetch(`${API_BASE}/api/settings`)
       .then((r) => r.json())
-      .then((data) => { setSettings(data.settings); setLoading(false); })
+      .then((data) => {
+        const s = data.settings || {};
+        setSettings({
+          catalog_mode:                  s.catalog_mode          || 'hybrid',
+          welcome_message:               s.welcome_message        || '',
+          min_age:                       s.min_age               || '18',
+          age_gate_question:             s.age_gate_question     || '',
+          age_yes_button:                s.age_yes_button        || '',
+          age_no_button:                 s.age_no_button         || '',
+          age_rejection_message:         s.age_rejection_message || '',
+          msg_welcome:                   s.msg_welcome                   || '',
+          msg_welcome_image_url:         s.msg_welcome_image_url         || '',
+          msg_product_found:             s.msg_product_found             || '',
+          msg_product_not_found:         s.msg_product_not_found         || '',
+          msg_added_to_cart:             s.msg_added_to_cart             || '',
+          msg_invoice_footer:            s.msg_invoice_footer            || '',
+          msg_order_confirmed:           s.msg_order_confirmed           || '',
+          msg_order_confirmed_image_url: s.msg_order_confirmed_image_url || '',
+          msg_farewell_action:           (s.msg_farewell_action as FarewellAction) || 'catalog',
+          msg_farewell_custom:           s.msg_farewell_custom           || '',
+          msg_location_optional:         s.msg_location_optional         || '',
+          msg_location_required:         s.msg_location_required         || '',
+          msg_location_skip_button:      s.msg_location_skip_button      || '',
+          msg_delivering_data_request:   s.msg_delivering_data_request   || '',
+        });
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
@@ -138,7 +326,7 @@ export default function SettingsPage() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       });
-      if (res.ok) setFeedback({ type: 'success', msg: '✅ Configuración guardada. Activa en ~60 segundos.' });
+      if (res.ok) setFeedback({ type: 'success', msg: '✅ Configuración guardada.' });
       else { const e = await res.json(); setFeedback({ type: 'error', msg: `❌ ${e.detail || 'No se pudo guardar'}` }); }
     } catch { setFeedback({ type: 'error', msg: '❌ Error de conexión.' }); }
     finally { setSaving(false); setTimeout(() => setFeedback(null), 6000); }
@@ -146,6 +334,9 @@ export default function SettingsPage() {
 
   const patch = (key: keyof Settings, value: string) =>
     setSettings((s) => s ? { ...s, [key]: value } : s);
+  // Widened alias for MsgField (accepts any string key)
+  const patchStr = (key: string, value: string) => patch(key as keyof Settings, value);
+
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" /></div>;
   if (!settings) return <div className="p-8 text-red-500 text-sm">No se pudo cargar la configuración.</div>;
@@ -155,7 +346,7 @@ export default function SettingsPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">⚙️ Configuración</h1>
-        <p className="text-sm text-gray-500 mt-1">Ajustes técnicos del catálogo, mensajes y notificaciones.</p>
+        <p className="text-sm text-gray-500 mt-1">Ajustes del catálogo, mensajes del bot y notificaciones.</p>
       </div>
 
       {/* Tabs */}
@@ -208,20 +399,26 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ── Mensajes (Age Gate) ── */}
+      {/* ── Mensajes del Bot ── */}
       {activeTab === 'messages' && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-800">Verificación de Edad (Age Gate)</h2>
-            <p className="text-sm text-gray-500 mt-1">Mensajes de verificación de edad para productos regulados.</p>
+        <div className="space-y-4">
+          {/* Leyenda de variables */}
+          <div className="flex items-start gap-2 p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-xs text-indigo-700">
+            <span className="text-base">💡</span>
+            <div>
+              <strong>Variables dinámicas:</strong> Haz clic en las etiquetas para insertarlas en el texto. El bot las reemplazará automáticamente con el valor real.
+              <span className="ml-1 opacity-70">Ej: &#123;&#123;nombre&#125;&#125; → &quot;Daniel&quot;</span>
+            </div>
           </div>
-          <div className="p-6 space-y-5">
+
+          {/* Verificación de Edad */}
+          <Section icon="🔞" title="Verificación de Edad" description="Mensajes del age gate para productos regulados">
             <Field label="Edad mínima requerida">
               <input type="number" value={settings.min_age} onChange={(e) => patch('min_age', e.target.value)}
                 className="w-32 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" min="13" max="25" />
               <p className="text-xs text-gray-400 mt-1">Colombia: 18 · USA: 21 · Suecia: 25</p>
             </Field>
-            <Field label="Mensaje de bienvenida (gate de edad)">
+            <Field label="Mensaje de bienvenida / verificación">
               <textarea rows={3} value={settings.welcome_message} onChange={(e) => patch('welcome_message', e.target.value)} className={`${inp} resize-none`} />
             </Field>
             <Field label="Pregunta de verificación">
@@ -236,9 +433,105 @@ export default function SettingsPage() {
               </Field>
             </div>
             <Field label="Mensaje de rechazo (menores de edad)">
-              <textarea rows={4} value={settings.age_rejection_message} onChange={(e) => patch('age_rejection_message', e.target.value)} className={`${inp} resize-none`} />
+              <textarea rows={3} value={settings.age_rejection_message} onChange={(e) => patch('age_rejection_message', e.target.value)} className={`${inp} resize-none`} />
             </Field>
-          </div>
+          </Section>
+
+          {/* Bienvenida */}
+          <Section icon="👋" title="Bienvenida" description="Primer mensaje cuando alguien escribe al bot">
+            <MsgField label="Mensaje de bienvenida" fieldKey="msg_welcome"
+              value={settings.msg_welcome} onChange={patchStr} multiline
+              imageUrl={settings.msg_welcome_image_url}
+              onImageChange={(url) => patch('msg_welcome_image_url', url)} />
+          </Section>
+
+          {/* Búsqueda de productos */}
+          <Section icon="🔍" title="Búsqueda de Productos" description="Mensajes al mostrar o no encontrar productos">
+            <MsgField label="Cuando encuentra productos" hint='El texto que aparece antes de mostrar la tarjeta del producto. Usa {{producto}} para el nombre buscado.'
+              fieldKey="msg_product_found" value={settings.msg_product_found} onChange={patchStr} multiline={false} />
+            <MsgField label="Cuando NO encuentra productos" hint='Mensaje cuando la búsqueda no arroja resultados.'
+              fieldKey="msg_product_not_found" value={settings.msg_product_not_found} onChange={patchStr} />
+          </Section>
+
+          {/* Carrito */}
+          <Section icon="🛒" title="Carrito" description="Mensajes al agregar o actualizar productos">
+            <MsgField label="Encabezado al agregar/actualizar carrito" hint='Aparece sobre la lista de productos del carrito. Usa {{producto}} y {{total}}.'
+              fieldKey="msg_added_to_cart" value={settings.msg_added_to_cart} onChange={patchStr} multiline={false} />
+          </Section>
+
+          {/* Datos de entrega */}
+          <Section icon="📋" title="Datos de Entrega" description="Solicitud de nombre, dirección y método de pago">
+            <MsgField label="Solicitud de datos al finalizar la compra"
+              fieldKey="msg_delivering_data_request" value={settings.msg_delivering_data_request} onChange={patchStr} />
+
+            {/* Vista previa de la factura */}
+            <div className="rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
+              <div className="px-3 py-2 border-b border-gray-200 bg-gray-100">
+                <span className="text-xs font-semibold text-gray-500">Vista previa de la factura</span>
+              </div>
+              <div className="p-3 space-y-1 text-xs text-gray-500 font-mono">
+                <p className="text-gray-700 font-semibold">📋 *Tu pedido:*</p>
+                <p>• 2x Producto A — $52.000 <span className="text-gray-300">(automático)</span></p>
+                <p>• 1x Producto B — $18.000 <span className="text-gray-300">(automático)</span></p>
+                <p className="border-t border-gray-200 pt-1">💰 *Total: $70.000* <span className="text-gray-300">(automático)</span></p>
+                <p className="border-t border-gray-200 pt-1">📦 *Dirección:* Calle 18... <span className="text-gray-300">(automático)</span></p>
+                <p>💳 *Pago:* Nequi <span className="text-gray-300">(automático)</span></p>
+                <p className="border-t border-gray-200 pt-1 text-indigo-600">👇 <em>Mensaje editable abajo</em></p>
+              </div>
+            </div>
+            <MsgField label="Texto al final de la factura (editable)" hint='Aparece al final de la factura de confirmación. Puedes incluir info de entrega, agradecimiento, etc.'
+              fieldKey="msg_invoice_footer" value={settings.msg_invoice_footer} onChange={patchStr} />
+          </Section>
+
+          {/* Confirmación del pedido */}
+          <Section icon="✅" title="Confirmación de Pedido" description="Mensaje tras confirmar la compra">
+            <MsgField label="Mensaje de confirmación" hint='Se envía cuando el cliente presiona ✅ Finalizar Compra.'
+              fieldKey="msg_order_confirmed" value={settings.msg_order_confirmed} onChange={patchStr}
+              imageUrl={settings.msg_order_confirmed_image_url}
+              onImageChange={(url) => patch('msg_order_confirmed_image_url', url)} />
+          </Section>
+
+          {/* Despedida post-pedido */}
+          <Section icon="👋" title="Despedida (post-pedido)" description="Qué enviar después de confirmar el pedido">
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-2">¿Qué enviar después del pedido?</p>
+              <div className="space-y-2">
+                {([
+                  { id: 'catalog', label: '📦 Catálogo de productos', desc: 'Muestra las categorías para que siga comprando.' },
+                  { id: 'nothing', label: '🚫 Nada', desc: 'No se envía ningún mensaje adicional.' },
+                  { id: 'custom',  label: '✏️ Mensaje personalizado', desc: 'Escribe el texto que quieres enviar.' },
+                ] as { id: FarewellAction; label: string; desc: string }[]).map((opt) => (
+                  <button key={opt.id} type="button"
+                    onClick={() => patch('msg_farewell_action', opt.id)}
+                    className={`w-full text-left p-3 rounded-xl border-2 transition-all ${settings.msg_farewell_action === opt.id ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <div className="flex items-start gap-2">
+                      <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${settings.msg_farewell_action === opt.id ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'}`}>
+                        {settings.msg_farewell_action === opt.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-800">{opt.label}</p>
+                        <p className="text-xs text-gray-400">{opt.desc}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {settings.msg_farewell_action === 'custom' && (
+              <MsgField label="Mensaje personalizado de despedida" fieldKey="msg_farewell_custom"
+                value={settings.msg_farewell_custom} onChange={patchStr} />
+            )}
+          </Section>
+
+          {/* Ubicación */}
+          <Section icon="📍" title="Ubicación" description="Mensajes al solicitar la ubicación del cliente">
+            <MsgField label="Texto al pedir ubicación (opcional)" hint='Se muestra con dos botones: [Enviar ubicación] y el botón de skip.'
+              fieldKey="msg_location_optional" value={settings.msg_location_optional} onChange={patchStr} />
+            <MsgField label="Botón de omitir ubicación (máx 20 chars)" hint='Texto del botón para no compartir ubicación.'
+              fieldKey="msg_location_skip_button" value={settings.msg_location_skip_button} onChange={patchStr} multiline={false} />
+            <MsgField label="Texto al pedir ubicación (obligatoria)" hint='Se muestra con solo el botón de enviar ubicación. No tiene opción de saltar.'
+              fieldKey="msg_location_required" value={settings.msg_location_required} onChange={patchStr} />
+          </Section>
         </div>
       )}
 

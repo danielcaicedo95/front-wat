@@ -352,21 +352,10 @@ export default function HomePage() {
           </Field>
         </div>
 
-        {/* Card: Mensajes chatbot */}
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-5">
-          <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
-            <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center text-lg flex-shrink-0">💬</div>
-            <div>
-              <h2 className="text-base font-bold text-gray-800">Mensajes del Chatbot</h2>
-              <p className="text-xs text-gray-400">Usa <code className="bg-gray-100 px-1 rounded">{'{business_name}'}</code> para el nombre</p>
-            </div>
-          </div>
-          <Field label="Saludo inicial" hint="Primer mensaje que ve el cliente.">
-            <textarea rows={2} value={brand.chatbot_greeting} onChange={(e) => patch('chatbot_greeting', e.target.value)} className={`${inp} resize-none`} placeholder="¡Hola! 👋 Bienvenido a {business_name}. ¿En qué te ayudo?" />
-          </Field>
-          <Field label="Mensaje de despedida" hint="Se envía al completar un pedido.">
-            <textarea rows={2} value={brand.chatbot_farewell} onChange={(e) => patch('chatbot_farewell', e.target.value)} className={`${inp} resize-none`} placeholder="¡Gracias por tu pedido! 🎉 En breve lo procesamos." />
-          </Field>
+        {/* Mensajes del chatbot ahora se configuran en Configuración → Mensajes */}
+        <div className="flex items-center gap-2 px-4 py-3 bg-indigo-50 border border-indigo-100 rounded-2xl text-sm text-indigo-700">
+          <span>💬</span>
+          <span>Los mensajes del chatbot se configuran en <strong>Configuración → Mensajes</strong>.</span>
         </div>
 
       </div>
