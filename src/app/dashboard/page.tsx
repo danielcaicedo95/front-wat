@@ -33,6 +33,7 @@ interface Brand {
   out_of_office_enabled: string;
   out_of_office_message: string;
   sell_24_hours: string;
+  oof_mode: string;
 }
 
 const defaultBrand: Brand = {
@@ -55,6 +56,7 @@ const defaultBrand: Brand = {
   out_of_office_enabled: 'false',
   out_of_office_message: 'En este momento nos encontramos cerrados. Nuestro horario de atención volverá a estar activo pronto. Puedes dejarnos tu pedido y te contactaremos.',
   sell_24_hours: 'true',
+  oof_mode: 'B',
 };
 
 export interface DaySchedule {
@@ -151,6 +153,7 @@ export default function HomePage() {
           out_of_office_enabled: s.out_of_office_enabled || 'false',
           out_of_office_message: s.out_of_office_message || 'En este momento nos encontramos cerrados. Nuestro horario de atención volverá a estar activo pronto. Puedes dejarnos tu pedido y te contactaremos.',
           sell_24_hours:        s.sell_24_hours || 'true',
+          oof_mode:             s.oof_mode || (s.sell_24_hours === 'false' ? 'A' : 'B'),
         });
         if (s.business_schedule) {
           try {
@@ -423,32 +426,45 @@ export default function HomePage() {
           <div className="mt-8 pt-6 border-t border-gray-100 space-y-5">
             <h3 className="text-sm font-bold text-gray-800">Funcionamiento del Chatbot</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="flex flex-col gap-3 p-5 rounded-2xl border-2 transition-all cursor-pointer bg-white hover:border-indigo-300 relative overflow-hidden" style={{ borderColor: brand.sell_24_hours === 'true' ? '#4f46e5' : '#f3f4f6' }}>
-                <div className="flex items-center gap-3">
-                  <input type="radio" checked={brand.sell_24_hours === 'true'} onChange={() => patch('sell_24_hours', 'true')} className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
-                  <span className="text-sm font-bold text-gray-900">Opción B: Vender 24 Horas</span>
+            <div className="flex flex-col gap-4">
+              {/* Opción B */}
+              <label className="flex items-start gap-4 p-5 rounded-2xl border-2 transition-all cursor-pointer bg-white hover:border-indigo-300 relative overflow-hidden" style={{ borderColor: brand.oof_mode === 'B' ? '#4f46e5' : '#f3f4f6' }}>
+                <input type="radio" checked={brand.oof_mode === 'B'} onChange={() => patch('oof_mode', 'B')} className="mt-1 w-5 h-5 text-indigo-600 focus:ring-indigo-500 cursor-pointer flex-shrink-0" />
+                <div className="flex-1">
+                  <span className="block text-sm font-bold text-gray-900">Opción B: Vender 24 Horas (Recomendado)</span>
+                  <span className="block text-xs text-gray-500 mt-1 leading-relaxed">
+                    El chatbot funciona 24/7. Ignora los horarios de atención y siempre atiende a los clientes bajo su flujo normal de ventas.
+                  </span>
                 </div>
-                <p className="text-xs text-gray-500 ml-8 leading-relaxed">
-                  El chatbot funciona 24/7. Ignora los horarios de atención y siempre atiende normalmente a los clientes sin restricciones ni de enviar mensajes de cerrado.
-                </p>
               </label>
 
-              <label className="flex flex-col gap-3 p-5 rounded-2xl border-2 transition-all cursor-pointer bg-white hover:border-indigo-300 relative overflow-hidden" style={{ borderColor: brand.sell_24_hours === 'false' ? '#4f46e5' : '#f3f4f6' }}>
-                <div className="flex items-center gap-3">
-                  <input type="radio" checked={brand.sell_24_hours === 'false'} onChange={() => patch('sell_24_hours', 'false')} className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
-                  <span className="text-sm font-bold text-gray-900">Opción A: Respetar Horarios</span>
+              {/* Opción C */}
+              <label className="flex items-start gap-4 p-5 rounded-2xl border-2 transition-all cursor-pointer bg-white hover:border-indigo-300 relative overflow-hidden" style={{ borderColor: brand.oof_mode === 'C' ? '#4f46e5' : '#f3f4f6' }}>
+                <input type="radio" checked={brand.oof_mode === 'C'} onChange={() => patch('oof_mode', 'C')} className="mt-1 w-5 h-5 text-indigo-600 focus:ring-indigo-500 cursor-pointer flex-shrink-0" />
+                <div className="flex-1">
+                  <span className="block text-sm font-bold text-gray-900">Opción C: Avisar cerrado pero permitir compras</span>
+                  <span className="block text-xs text-gray-500 mt-1 leading-relaxed">
+                    Si escriben fuera del horario, el bot envía un aviso de cerrado automático, pero luego <strong>permite pedir con normalidad</strong>. Especial para agendar pedidos para el día siguiente.
+                  </span>
                 </div>
-                <p className="text-xs text-gray-500 ml-8 leading-relaxed">
-                  Si escriben fuera del horario, el bot enviará un aviso de cerrado y no permitirá ver productos ni pedir hasta que abras.
-                </p>
+              </label>
+
+              {/* Opción A */}
+              <label className="flex items-start gap-4 p-5 rounded-2xl border-2 transition-all cursor-pointer bg-white hover:border-indigo-300 relative overflow-hidden" style={{ borderColor: brand.oof_mode === 'A' ? '#4f46e5' : '#f3f4f6' }}>
+                <input type="radio" checked={brand.oof_mode === 'A'} onChange={() => patch('oof_mode', 'A')} className="mt-1 w-5 h-5 text-indigo-600 focus:ring-indigo-500 cursor-pointer flex-shrink-0" />
+                <div className="flex-1">
+                  <span className="block text-sm font-bold text-gray-900">Opción A: Respetar Horarios (Bloqueo estricto)</span>
+                  <span className="block text-xs text-gray-500 mt-1 leading-relaxed">
+                    Si escriben fuera del horario, el bot enviará un aviso de cerrado y <strong>bloqueará por completo</strong> que vean el catálogo o realicen un pedido.
+                  </span>
+                </div>
               </label>
             </div>
 
-            {brand.sell_24_hours === 'false' && (
+            {(brand.oof_mode === 'A' || brand.oof_mode === 'C') && (
               <div className="pl-2 pt-2 animate-in fade-in slide-in-from-top-2">
                 <Field label="Mensaje cuando está cerrado" hint="Este mensaje automático se enviará a los clientes que escriban fuera del horario de atención.">
-                  <textarea rows={2} value={brand.out_of_office_message} onChange={e => patch('out_of_office_message', e.target.value)} className={`${inp} resize-none border-amber-200 focus:border-amber-400 focus:ring-amber-400`} placeholder="En este momento nos encontramos cerrados." />
+                  <textarea rows={2} value={brand.out_of_office_message} onChange={e => patch('out_of_office_message', e.target.value)} className={`${inp} resize-none border-amber-200 focus:border-amber-400 focus:ring-amber-400 w-full`} placeholder="En este momento nos encontramos cerrados." />
                 </Field>
               </div>
             )}
