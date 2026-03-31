@@ -20,7 +20,6 @@ interface Brand {
   business_category: string;
   business_address: string;
   business_city: string;
-  business_hours: string;
   business_email: string;
   business_phone: string;
   business_website: string;
@@ -29,6 +28,11 @@ interface Brand {
   delivery_info: string;
   chatbot_greeting: string;
   chatbot_farewell: string;
+  business_schedule: string;
+  business_timezone: string;
+  out_of_office_enabled: string;
+  out_of_office_message: string;
+  sell_24_hours: string;
 }
 
 const defaultBrand: Brand = {
@@ -38,7 +42,6 @@ const defaultBrand: Brand = {
   business_category: 'Retail',
   business_address: '',
   business_city: '',
-  business_hours: '',
   business_email: '',
   business_phone: '',
   business_website: '',
@@ -47,6 +50,28 @@ const defaultBrand: Brand = {
   delivery_info: '',
   chatbot_greeting: '',
   chatbot_farewell: '',
+  business_schedule: '',
+  business_timezone: 'America/Bogota',
+  out_of_office_enabled: 'false',
+  out_of_office_message: 'En este momento nos encontramos cerrados. Nuestro horario de atención volverá a estar activo pronto. Puedes dejarnos tu pedido y te contactaremos.',
+  sell_24_hours: 'true',
+};
+
+export interface DaySchedule {
+  open: string;
+  close: string;
+  is_closed: boolean;
+}
+export type ScheduleObj = Record<string, DaySchedule>;
+
+const defaultSchedule: ScheduleObj = {
+  monday: { open: '09:00', close: '18:00', is_closed: false },
+  tuesday: { open: '09:00', close: '18:00', is_closed: false },
+  wednesday: { open: '09:00', close: '18:00', is_closed: false },
+  thursday: { open: '09:00', close: '18:00', is_closed: false },
+  friday: { open: '09:00', close: '18:00', is_closed: false },
+  saturday: { open: '10:00', close: '14:00', is_closed: false },
+  sunday: { open: '00:00', close: '00:00', is_closed: true },
 };
 
 // ── Campo genérico ────────────────────────────────────────────────────────────
@@ -66,7 +91,7 @@ const inp = 'w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 t
 function ProfileComplete({ brand }: { brand: Brand }) {
   const fields = [
     brand.business_name, brand.business_logo_url, brand.business_description,
-    brand.business_address, brand.business_hours, brand.business_email,
+    brand.business_address, brand.business_email,
     brand.business_website, brand.payment_methods,
   ];
   const filled = fields.filter(Boolean).length;
@@ -86,6 +111,7 @@ function ProfileComplete({ brand }: { brand: Brand }) {
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function HomePage() {
   const [brand, setBrand] = useState<Brand>(defaultBrand);
+  const [schedule, setSchedule] = useState<ScheduleObj>(defaultSchedule);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -112,7 +138,6 @@ export default function HomePage() {
           business_category:    s.business_category || 'Retail',
           business_address:     s.business_address || '',
           business_city:        s.business_city || '',
-          business_hours:       s.business_hours || '',
           business_email:       s.business_email || '',
           business_phone:       s.business_phone || '',
           business_website:     s.business_website || '',
@@ -121,7 +146,18 @@ export default function HomePage() {
           delivery_info:        s.delivery_info || '',
           chatbot_greeting:     s.chatbot_greeting || '',
           chatbot_farewell:     s.chatbot_farewell || '',
+          business_schedule:    s.business_schedule || '',
+          business_timezone:    s.business_timezone || 'America/Bogota',
+          out_of_office_enabled: s.out_of_office_enabled || 'false',
+          out_of_office_message: s.out_of_office_message || 'En este momento nos encontramos cerrados. Nuestro horario de atención volverá a estar activo pronto. Puedes dejarnos tu pedido y te contactaremos.',
+          sell_24_hours:        s.sell_24_hours || 'true',
         });
+        if (s.business_schedule) {
+          try {
+            const parsed = JSON.parse(s.business_schedule);
+            if (Object.keys(parsed).length > 0) setSchedule(parsed);
+          } catch(e) {}
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -162,11 +198,12 @@ export default function HomePage() {
   // ── Save to Supabase ──────────────────────────────────────────────────────
   const handleSave = async () => {
     setSaving(true);
+    const payloadToSave = { ...brand, business_schedule: JSON.stringify(schedule) };
     try {
       const res = await fetch(`${API_BASE}/api/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(brand),
+        body: JSON.stringify(payloadToSave),
       });
       if (res.ok) showToast('success', '✅ Información guardada correctamente');
       else { const e = await res.json(); showToast('error', `❌ ${e.detail || 'Error al guardar'}`); }
@@ -306,10 +343,7 @@ export default function HomePage() {
                 {WA_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
-            {/* Horario */}
-            <Field label="Horario de atención">
-              <input type="text" value={brand.business_hours} onChange={(e) => patch('business_hours', e.target.value)} className={inp} placeholder="Ej: Lun – Sáb, 9am – 9pm" />
-            </Field>
+
             {/* Dirección */}
             <Field label="Dirección física">
               <input type="text" value={brand.business_address} onChange={(e) => patch('business_address', e.target.value)} className={inp} placeholder="Ej: Calle 80 #45-32, Bogotá" />
@@ -332,6 +366,83 @@ export default function HomePage() {
             <Field label="Sitio web 2 (opcional)">
               <input type="url" value={brand.business_website_2} onChange={(e) => patch('business_website_2', e.target.value)} className={inp} placeholder="https://link.bio/tu-tienda" />
             </Field>
+          </div>
+        </div>
+
+        {/* Card: Horarios y OOF */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-5 lg:col-span-2">
+          <div className="flex items-center gap-3 pb-2 border-b border-gray-100">
+            <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center text-lg flex-shrink-0">🕒</div>
+            <div>
+              <h2 className="text-base font-bold text-gray-800">Horarios de Atención</h2>
+              <p className="text-xs text-gray-400">Controla cuándo el bot toma pedidos o avisa que estás cerrado.</p>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-gray-700">Zona Horaria</label>
+            <select value={brand.business_timezone} onChange={e => patch('business_timezone', e.target.value)} className={`${inp} w-full sm:w-80 cursor-pointer`}>
+              <option value="America/Bogota">Colombia, Perú, Ecuador (America/Bogota)</option>
+              <option value="America/Mexico_City">México Central (America/Mexico_City)</option>
+              <option value="America/Santiago">Chile (America/Santiago)</option>
+              <option value="America/Argentina/Buenos_Aires">Argentina (America/Argentina/Buenos_Aires)</option>
+            </select>
+          </div>
+
+          <div className="space-y-2 mt-4">
+             {[
+               { id: 'monday', label: 'Lunes' },
+               { id: 'tuesday', label: 'Martes' },
+               { id: 'wednesday', label: 'Miércoles' },
+               { id: 'thursday', label: 'Jueves' },
+               { id: 'friday', label: 'Viernes' },
+               { id: 'saturday', label: 'Sábado' },
+               { id: 'sunday', label: 'Domingo' }
+             ].map(day => (
+               <div key={day.id} className="flex flex-col sm:flex-row sm:items-center gap-4 p-3 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100 object-contain">
+                 <div className="w-24 font-medium text-sm text-gray-700">{day.label}</div>
+                 <label className="flex items-center cursor-pointer">
+                   <div className="relative">
+                     <input type="checkbox" className="sr-only" checked={!schedule[day.id]?.is_closed} onChange={e => setSchedule(s => ({...s, [day.id]: { ...s[day.id], is_closed: !e.target.checked }}))} />
+                     <div className={`block w-10 h-6 rounded-full transition-colors ${!schedule[day.id]?.is_closed ? 'bg-indigo-500' : 'bg-gray-300'}`}></div>
+                     <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${!schedule[day.id]?.is_closed ? 'transform translate-x-4' : ''}`}></div>
+                   </div>
+                   <span className="ml-3 text-xs font-semibold text-gray-500 w-16">{!schedule[day.id]?.is_closed ? 'Abierto' : 'Cerrado'}</span>
+                 </label>
+                 {!schedule[day.id]?.is_closed && (
+                   <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                     <input type="time" className={`${inp} py-1.5 w-32`} value={schedule[day.id]?.open || '09:00'} onChange={e => setSchedule(s => ({...s, [day.id]: { ...s[day.id], open: e.target.value }}))} />
+                     <span className="text-xs text-gray-400 font-bold">a</span>
+                     <input type="time" className={`${inp} py-1.5 w-32`} value={schedule[day.id]?.close || '18:00'} onChange={e => setSchedule(s => ({...s, [day.id]: { ...s[day.id], close: e.target.value }}))} />
+                   </div>
+                 )}
+               </div>
+             ))}
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-gray-100 space-y-5">
+            <h3 className="text-sm font-bold text-gray-800">Modo Fuera de Horario</h3>
+            
+            <label className="flex items-center gap-3 cursor-pointer">
+               <input type="checkbox" checked={brand.out_of_office_enabled === 'true'} onChange={e => patch('out_of_office_enabled', e.target.checked ? 'true' : 'false')} className="w-5 h-5 text-indigo-600 rounded cursor-pointer" />
+               <span className="text-sm font-medium text-gray-700">Avisar a clientes cuando el negocio esté cerrado</span>
+            </label>
+
+            {brand.out_of_office_enabled === 'true' && (
+              <div className="pl-8 space-y-4 animate-in fade-in slide-in-from-top-2">
+                <Field label="Mensaje interactivo de cerrado" hint="Este mensaje se enviará (una vez por sesión) si alguien escribe fuera del horario.">
+                  <textarea rows={2} value={brand.out_of_office_message} onChange={e => patch('out_of_office_message', e.target.value)} className={`${inp} resize-none`} placeholder="En este momento nos encontramos cerrados." />
+                </Field>
+                
+                <label className="flex items-start gap-3 cursor-pointer bg-indigo-50 p-4 rounded-xl border border-indigo-200 shadow-inner hover:bg-indigo-100/50 transition-colors">
+                   <input type="checkbox" checked={brand.sell_24_hours === 'true'} onChange={e => patch('sell_24_hours', e.target.checked ? 'true' : 'false')} className="w-5 h-5 text-indigo-600 rounded mt-0.5" />
+                   <div>
+                     <span className="block text-sm font-bold text-indigo-900">Vender 24 horas (Recomendado)</span>
+                     <span className="block text-xs text-indigo-700/80 mt-1">Si está activo, el bot envía el aviso automátio de cerrado pero **permite al cliente continuar** interactuando, explorando el catálogo y armando su pedido para despacharlo cuando abras. Si está inactivo, **bloquea el bot** y no permite más compras hasta el horario de apertura.</span>
+                   </div>
+                </label>
+              </div>
+            )}
           </div>
         </div>
 
