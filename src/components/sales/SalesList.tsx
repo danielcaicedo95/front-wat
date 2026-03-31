@@ -12,6 +12,21 @@ type Order = {
   created_at: string
 }
 
+const renderTextWithLinksAndBreaks = (text: string) => {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.split(urlRegex).map((part, i) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline hover:text-blue-700 font-medium">
+          Abrir en Mapa 📍
+        </a>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+};
+
 export default function SalesList() {
   const [orders, setOrders] = useState<Order[]>([])
   const API_URL = process.env.NEXT_PUBLIC_API_URL!
@@ -37,8 +52,8 @@ export default function SalesList() {
               <div className="flex justify-between items-center mb-2">
                 <div>
                   <p className="font-semibold text-lg">{order.name}</p>
-                  <p className="text-gray-500 text-sm">{order.phone_number}</p>
-                  <p className="text-gray-600">{order.address}</p>
+                  <p className="text-gray-500 text-sm mb-1">{order.phone_number}</p>
+                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{renderTextWithLinksAndBreaks(order.address)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-500">Pagó con: <strong>{order.payment_method}</strong></p>
