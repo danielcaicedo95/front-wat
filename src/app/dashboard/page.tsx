@@ -421,26 +421,35 @@ export default function HomePage() {
           </div>
 
           <div className="mt-8 pt-6 border-t border-gray-100 space-y-5">
-            <h3 className="text-sm font-bold text-gray-800">Modo Fuera de Horario</h3>
+            <h3 className="text-sm font-bold text-gray-800">Funcionamiento del Chatbot</h3>
             
-            <label className="flex items-center gap-3 cursor-pointer">
-               <input type="checkbox" checked={brand.out_of_office_enabled === 'true'} onChange={e => patch('out_of_office_enabled', e.target.checked ? 'true' : 'false')} className="w-5 h-5 text-indigo-600 rounded cursor-pointer" />
-               <span className="text-sm font-medium text-gray-700">Avisar a clientes cuando el negocio esté cerrado</span>
-            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="flex flex-col gap-3 p-5 rounded-2xl border-2 transition-all cursor-pointer bg-white hover:border-indigo-300 relative overflow-hidden" style={{ borderColor: brand.sell_24_hours === 'true' ? '#4f46e5' : '#f3f4f6' }}>
+                <div className="flex items-center gap-3">
+                  <input type="radio" checked={brand.sell_24_hours === 'true'} onChange={() => patch('sell_24_hours', 'true')} className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                  <span className="text-sm font-bold text-gray-900">Opción B: Vender 24 Horas</span>
+                </div>
+                <p className="text-xs text-gray-500 ml-8 leading-relaxed">
+                  El chatbot funciona 24/7. Ignora los horarios de atención y siempre atiende normalmente a los clientes sin restricciones ni de enviar mensajes de cerrado.
+                </p>
+              </label>
 
-            {brand.out_of_office_enabled === 'true' && (
-              <div className="pl-8 space-y-4 animate-in fade-in slide-in-from-top-2">
-                <Field label="Mensaje interactivo de cerrado" hint="Este mensaje se enviará (una vez por sesión) si alguien escribe fuera del horario.">
-                  <textarea rows={2} value={brand.out_of_office_message} onChange={e => patch('out_of_office_message', e.target.value)} className={`${inp} resize-none`} placeholder="En este momento nos encontramos cerrados." />
+              <label className="flex flex-col gap-3 p-5 rounded-2xl border-2 transition-all cursor-pointer bg-white hover:border-indigo-300 relative overflow-hidden" style={{ borderColor: brand.sell_24_hours === 'false' ? '#4f46e5' : '#f3f4f6' }}>
+                <div className="flex items-center gap-3">
+                  <input type="radio" checked={brand.sell_24_hours === 'false'} onChange={() => patch('sell_24_hours', 'false')} className="w-5 h-5 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                  <span className="text-sm font-bold text-gray-900">Opción A: Respetar Horarios</span>
+                </div>
+                <p className="text-xs text-gray-500 ml-8 leading-relaxed">
+                  Si escriben fuera del horario, el bot enviará un aviso de cerrado y no permitirá ver productos ni pedir hasta que abras.
+                </p>
+              </label>
+            </div>
+
+            {brand.sell_24_hours === 'false' && (
+              <div className="pl-2 pt-2 animate-in fade-in slide-in-from-top-2">
+                <Field label="Mensaje cuando está cerrado" hint="Este mensaje automático se enviará a los clientes que escriban fuera del horario de atención.">
+                  <textarea rows={2} value={brand.out_of_office_message} onChange={e => patch('out_of_office_message', e.target.value)} className={`${inp} resize-none border-amber-200 focus:border-amber-400 focus:ring-amber-400`} placeholder="En este momento nos encontramos cerrados." />
                 </Field>
-                
-                <label className="flex items-start gap-3 cursor-pointer bg-indigo-50 p-4 rounded-xl border border-indigo-200 shadow-inner hover:bg-indigo-100/50 transition-colors">
-                   <input type="checkbox" checked={brand.sell_24_hours === 'true'} onChange={e => patch('sell_24_hours', e.target.checked ? 'true' : 'false')} className="w-5 h-5 text-indigo-600 rounded mt-0.5" />
-                   <div>
-                     <span className="block text-sm font-bold text-indigo-900">Vender 24 horas (Recomendado)</span>
-                     <span className="block text-xs text-indigo-700/80 mt-1">Si está activo, el bot envía el aviso automátio de cerrado pero **permite al cliente continuar** interactuando, explorando el catálogo y armando su pedido para despacharlo cuando abras. Si está inactivo, **bloquea el bot** y no permite más compras hasta el horario de apertura.</span>
-                   </div>
-                </label>
               </div>
             )}
           </div>
