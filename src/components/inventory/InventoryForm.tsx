@@ -117,7 +117,7 @@ export default function InventoryForm({ onAdd }: Props) {
   const LabelClass = "block text-sm font-medium text-gray-700 mb-1.5"
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 space-y-6">
+    <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6">
 
       {/* Basic Info */}
       <section>
@@ -175,7 +175,7 @@ export default function InventoryForm({ onAdd }: Props) {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={LabelClass}>Etiquetas</label>
               <input
@@ -208,7 +208,7 @@ export default function InventoryForm({ onAdd }: Props) {
           {variants.length > 0 && <span className="ml-2 text-xs font-normal text-amber-600 normal-case">Opcional (hay variantes)</span>}
         </h3>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={LabelClass}>
                 Precio (COP) {variants.length === 0 && <span className="text-red-500">*</span>}
@@ -277,7 +277,7 @@ export default function InventoryForm({ onAdd }: Props) {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Atributo</label>
                     <input
@@ -300,7 +300,7 @@ export default function InventoryForm({ onAdd }: Props) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">Precio COP</label>
                     <div className="relative">
@@ -366,7 +366,7 @@ export default function InventoryForm({ onAdd }: Props) {
         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Imágenes del Producto</h3>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           {images.length > 0 && (
-            <div className="grid grid-cols-5 gap-2 mb-4">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
               {images.map((img, i) => (
                 <div key={i} className="relative group">
                   <img
@@ -413,7 +413,7 @@ export default function InventoryForm({ onAdd }: Props) {
       </section>
 
       {/* Submit */}
-      <div className="pb-2">
+      <div className="pb-8 sm:pb-4">
         <button
           type="submit"
           disabled={submitting || success}

@@ -229,7 +229,7 @@ export default function EditProductDrawer({ product, onClose, onSaved }: Props) 
             </div>
 
             {/* ── Tabs ── */}
-            <div className="flex border-b border-gray-100 shrink-0 px-2">
+            <div className="flex border-b border-gray-100 shrink-0 px-2 overflow-x-auto hide-scrollbar">
                 <TabBtn id="info" label="Info & Precio" />
                 <TabBtn id="images" label="Imágenes" count={totalImages} />
                 <TabBtn id="variants" label="Variantes" count={totalVariants} />
@@ -240,7 +240,7 @@ export default function EditProductDrawer({ product, onClose, onSaved }: Props) 
 
                 {/* ══════════ INFO TAB ══════════ */}
                 {activeTab === "info" && (
-                    <div className="p-6 space-y-5">
+                    <div className="p-4 sm:p-6 space-y-5">
                         <div>
                             <label className={LabelClass}>Nombre del Producto</label>
                             <input value={name} onChange={e => setName(e.target.value)} className={InputClass} placeholder="Nombre visible al cliente" />
@@ -256,7 +256,7 @@ export default function EditProductDrawer({ product, onClose, onSaved }: Props) 
                             />
                             <p className="text-xs text-gray-400 mt-1">💡 Una buena descripción mejora la búsqueda en el chatbot</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className={LabelClass}>
                                     Precio (COP)
@@ -301,13 +301,13 @@ export default function EditProductDrawer({ product, onClose, onSaved }: Props) 
 
                 {/* ══════════ IMAGES TAB ══════════ */}
                 {activeTab === "images" && (
-                    <div className="p-6 space-y-6">
+                    <div className="p-4 sm:p-6 space-y-6">
                         <div>
                             <p className={LabelClass}>Imágenes actuales del producto</p>
                             {visibleGeneralImages.length === 0 && newGeneralImages.length === 0 ? (
                                 <p className="text-sm text-gray-400 py-4">Sin imágenes generales aún.</p>
                             ) : (
-                                <div className="grid grid-cols-5 gap-2 mb-3">
+                                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-3">
                                     {visibleGeneralImages.map(img => (
                                         <div key={img.id} className="relative group">
                                             <img src={img.url} alt="" className="w-full aspect-square object-cover rounded-lg border border-gray-200" />
@@ -350,7 +350,7 @@ export default function EditProductDrawer({ product, onClose, onSaved }: Props) 
 
                 {/* ══════════ VARIANTS TAB ══════════ */}
                 {activeTab === "variants" && (
-                    <div className="p-6 space-y-4">
+                    <div className="p-4 sm:p-6 space-y-4">
 
                         {/* Section header */}
                         <div className="flex items-center justify-between">
@@ -444,7 +444,7 @@ export default function EditProductDrawer({ product, onClose, onSaved }: Props) 
             </div>
 
             {/* ── Footer ── */}
-            <div className="shrink-0 border-t border-gray-100 px-6 py-4 bg-white space-y-3">
+            <div className="shrink-0 border-t border-gray-100 px-4 sm:px-6 py-4 pb-8 sm:pb-4 bg-white space-y-3">
                 {error && (
                     <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-lg">
                         <span className="text-red-500 mt-0.5">⚠️</span>
@@ -533,7 +533,7 @@ function VariantCard({
             {/* Card body */}
             <div className="p-4 space-y-3">
                 {/* Options row */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label className="block text-xs text-gray-500 mb-1 font-medium">Atributo <span className="text-gray-300">(ej: Sabor)</span></label>
                         <input
@@ -555,7 +555,7 @@ function VariantCard({
                 </div>
 
                 {/* Price/Stock row */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label className="block text-xs text-gray-500 mb-1 font-medium">Precio COP</label>
                         <div className="relative">

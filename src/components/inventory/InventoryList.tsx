@@ -107,7 +107,7 @@ export default function InventoryList({ reloadFlag, onAction }: Props) {
   return (
     <div className="space-y-4">
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: "Total Productos", value: products.length, icon: "📦" },
           { label: "Con Stock", value: products.filter(p => getTotalStock(p) > 0).length, icon: "✅" },
@@ -142,7 +142,7 @@ export default function InventoryList({ reloadFlag, onAction }: Props) {
           <p className="text-sm text-gray-500 ml-auto">{filtered.length} producto{filtered.length !== 1 ? "s" : ""}</p>
         </div>
 
-        {/* Table */}
+        {/* Items List */}
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center py-20 text-gray-400">
             <div className="text-5xl mb-4">📭</div>
@@ -150,7 +150,181 @@ export default function InventoryList({ reloadFlag, onAction }: Props) {
             <p className="text-sm mt-1">Agrega tu primer producto usando el botón de arriba</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <>
+            {/* Mobile Card View */}
+            <div className="block md:hidden divide-y divide-gray-100">
+              {filtered.map(prod => {
+                const variants = (prod as any).product_variants ?? []
+                const images = (prod as any).product_images ?? []
+                const generalImages = images.filter((i: any) => !i.variant_id)
+                const thumbnail = getThumbnail(prod)
+                const totalStock = getTotalStock(prod)
+                const isExpanded = expandedId === prod.id
+                const stockBadgeColor = totalStock === 0
+                  ? "bg-red-50 text-red-700 border-red-200"
+                  : totalStock < 5
+                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                    : "bg-green-50 text-green-700 border-green-200"
+
+                return (
+                  <div key={prod.id} className="bg-white">
+                    <div
+                      className={`p-4 flex flex-col gap-3 hover:bg-gray-50/80 transition-colors cursor-pointer ${isExpanded ? "bg-gray-50/60" : ""}`}
+                      onClick={() => setExpandedId(isExpanded ? null : prod.id)}
+                    >
+                      <div className="flex items-start gap-3">
+                        {thumbnail ? (
+                          <img src={thumbnail} alt={prod.name} className="w-14 h-14 object-cover rounded-lg border border-gray-100 flex-shrink-0" />
+                        ) : (
+                          <div className="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 text-gray-400 text-xs text-center border border-dashed border-gray-200">
+                            IMG
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start gap-2">
+                            <p className="font-medium text-gray-900 leading-tight truncate">{prod.name}</p>
+                            <span className="font-semibold text-gray-700 text-sm whitespace-nowrap">
+                              {variants.length > 0 ? (
+                                <span className="text-xs text-gray-400">Desde {formatCOP(Math.min(...variants.map((v: any) => v.price || 0)))}</span>
+                              ) : (
+                                formatCOP(prod.price)
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {prod.category && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                {prod.category.name}
+                              </span>
+                            )}
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${stockBadgeColor}`}>
+                              {totalStock} uds
+                            </span>
+                            {variants.length > 0 && (
+                              <span className="text-[10px] font-medium text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                                {variants.length} var{variants.length > 1 ? "s" : ""}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-1" onClick={e => e.stopPropagation()}>
+                        <button
+                          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                          title="Ver detalles"
+                          onClick={() => setExpandedId(isExpanded ? null : prod.id)}
+                        >
+                          <svg className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => setEditingProduct(prod)}
+                          className="flex items-center gap-1 p-1.5 text-gray-500 hover:text-[#008060] hover:bg-[#008060]/10 rounded-md transition-colors text-xs font-medium"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(prod.id)}
+                          disabled={deleting === prod.id}
+                          className="flex items-center gap-1 p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors text-xs font-medium"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mobile Expanded Row */}
+                    {isExpanded && (
+                      <div className="bg-gray-50/80 border-t border-b border-gray-100 px-4 py-4 flex flex-col gap-5">
+                        {/* Images */}
+                        <div>
+                          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Imágenes</p>
+                          <div className="flex overflow-x-auto gap-2 pb-2 hide-scrollbar">
+                            {generalImages.length === 0 ? (
+                              <div className="w-16 h-16 rounded-lg bg-white border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 text-[10px] shrink-0">
+                                Sin imagen
+                              </div>
+                            ) : (
+                              generalImages.map((img: any) => (
+                                <img key={img.id} src={img.url} alt="img" className="w-16 h-16 object-cover rounded-lg border border-gray-200 shadow-sm shrink-0" />
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Stock */}
+                        <div>
+                          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                            {variants.length > 0 ? "Ajustar Stock (Variante)" : "Ajustar Stock"}
+                          </p>
+                          {variants.length === 0 ? (
+                            <StockAdjuster
+                              id={prod.id}
+                              label={prod.name}
+                              currentStock={prod.stock}
+                              qty={adjustQty[prod.id] || ""}
+                              onQtyChange={val => setAdjustQty(prev => ({ ...prev, [prod.id]: val }))}
+                              onAdjust={() => handleAdjustStock(prod.id, false, prod.stock)}
+                              compact
+                            />
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              {variants.map((v: any) => {
+                                const opts = Object.entries(v.options || {}).map(([k, val]) => `${k}: ${val}`).join(", ")
+                                return (
+                                  <div key={v.id} className="bg-white rounded-lg border border-gray-200 p-2.5">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex flex-col">
+                                        <span className="text-xs font-semibold text-gray-800">{opts || "Única"}</span>
+                                        <span className="text-[10px] text-gray-500">{formatCOP(v.price)}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${v.stock === 0 ? "bg-red-50 text-red-600 border-red-200" :
+                                            v.stock < 5 ? "bg-amber-50 text-amber-600 border-amber-200" :
+                                              "bg-green-50 text-green-600 border-green-200"
+                                          }`}>{v.stock} uds</span>
+                                        <button
+                                          onClick={() => handleDeleteVariant(v.id)}
+                                          className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                                          title="Eliminar variante"
+                                        >
+                                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    </div>
+                                    <StockAdjuster
+                                      id={v.id}
+                                      label=""
+                                      currentStock={v.stock}
+                                      qty={adjustQty[v.id] || ""}
+                                      onQtyChange={val => setAdjustQty(prev => ({ ...prev, [v.id]: val }))}
+                                      onAdjust={() => handleAdjustStock(v.id, true, v.stock)}
+                                      compact
+                                    />
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop Table */}
+            <table className="hidden md:table w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Producto</th>
@@ -278,7 +452,7 @@ export default function InventoryList({ reloadFlag, onAction }: Props) {
                     {isExpanded && (
                       <tr key={`${prod.id}-expanded`}>
                         <td colSpan={6} className="bg-gray-50/80 border-b border-gray-100 px-5 py-5">
-                          <div className="grid grid-cols-2 gap-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Images */}
                             <div>
                               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Imágenes</p>
@@ -361,6 +535,7 @@ export default function InventoryList({ reloadFlag, onAction }: Props) {
               })}
             </tbody>
           </table>
+          </>
         )}
       </div>
 
