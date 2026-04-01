@@ -42,12 +42,21 @@ export default function SalesList() {
   const [drivers, setDrivers] = useState<any[]>([])
   const [selectedDriverId, setSelectedDriverId] = useState("")
   const [dispatching, setDispatching] = useState(false)
+
+  // PIPELINE (CRM) States
+  const [showPipelineModal, setShowPipelineModal] = useState(false)
+  const [crmBoards, setCrmBoards] = useState<any[]>([])
+  const [crmStages, setCrmStages] = useState<any[]>([])
+  const [crmBoardId, setCrmBoardId] = useState("")
+  const [crmStageId, setCrmStageId] = useState("")
+  const [sendingToCrm, setSendingToCrm] = useState(false)
   
   const API_URL = process.env.NEXT_PUBLIC_API_URL!
 
   useEffect(() => {
     fetchOrders()
     fetchDrivers()
+    fetchCrmBoards()
   }, [])
 
   const fetchOrders = async () => {
@@ -66,6 +75,59 @@ export default function SalesList() {
       const data = await res.json()
       if (Array.isArray(data)) setDrivers(data)
     } catch(e){}
+  }
+
+  const fetchCrmBoards = async () => {
+    try {
+      const res = await fetch(`${API_URL}/crm/boards`)
+      const data = await res.json()
+      if (Array.isArray(data)) setCrmBoards(data)
+    } catch(e){}
+  }
+
+  const fetchCrmStages = async (boardId: string) => {
+    setCrmStages([])
+    setCrmStageId("")
+    if (!boardId) return
+    try {
+      const res = await fetch(`${API_URL}/crm/boards/${boardId}/stages`)
+      const data = await res.json()
+      if (Array.isArray(data)) setCrmStages(data)
+    } catch(e){}
+  }
+
+  const handleBoardChange = (boardId: string) => {
+    setCrmBoardId(boardId)
+    fetchCrmStages(boardId)
+  }
+
+  const handleSendToPipeline = async () => {
+    if (!selectedOrder || !crmBoardId || !crmStageId) return
+    setSendingToCrm(true)
+    try {
+      const res = await fetch(`${API_URL}/crm/deals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          board_id: crmBoardId,
+          stage_id: crmStageId,
+          order_id: selectedOrder.id,
+          name: selectedOrder.name,
+          phone_number: selectedOrder.phone_number,
+          value: selectedOrder.total,
+          notes: `Método de pago: ${selectedOrder.payment_method}\nDirección: ${selectedOrder.address}`,
+        }),
+      })
+      if (res.ok) {
+        alert(`✅ "${selectedOrder.name}" enviado al Pipeline correctamente.`)
+        setShowPipelineModal(false)
+        setCrmBoardId("")
+        setCrmStageId("")
+        setCrmStages([])
+      } else {
+        alert("Error al enviar al Pipeline. Revisa backend.")
+      }
+    } finally { setSendingToCrm(false) }
   }
 
   const handleDispatch = async () => {
@@ -437,12 +499,94 @@ export default function SalesList() {
                 <button onClick={() => { setSelectedOrderIds(new Set([selectedOrder.id])); setTimeout(handleExportXML, 100); }} className="bg-white border-2 border-gray-200 text-gray-800 hover:bg-gray-50 active:scale-95 transition-all p-2.5 rounded-xl font-bold shadow-sm" title="Descargar como XML">
                    📥
                 </button>
+                <button
+                  onClick={() => setShowPipelineModal(true)}
+                  className="bg-indigo-50 border-2 border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white active:scale-95 transition-all px-3 py-2.5 rounded-xl font-bold shadow-sm text-sm"
+                  title="Enviar al Pipeline CRM"
+                >
+                  📋 Pipeline
+                </button>
               </div>
               
               <div className="text-right ml-auto bg-gray-900 px-5 py-2.5 rounded-xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
                 <span className="text-green-400 text-2xl font-black tabular-nums">
                   ${selectedOrder.total.toLocaleString()}
                 </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ENVIAR A PIPELINE CRM */}
+      {showPipelineModal && selectedOrder && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowPipelineModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-black text-black mb-1">📋 Enviar al Pipeline</h3>
+            <p className="text-sm text-gray-500 mb-5 font-medium">
+              Enviando: <span className="font-bold text-black">{selectedOrder.name}</span>
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1.5">
+                  1. Selecciona el Tablero
+                </label>
+                {crmBoards.length === 0 ? (
+                  <p className="text-sm text-red-500 font-bold">No tienes tableros creados. Ve a Pipeline y crea uno primero.</p>
+                ) : (
+                  <select
+                    value={crmBoardId}
+                    onChange={(e) => handleBoardChange(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-indigo-500 outline-none text-black font-bold bg-white"
+                  >
+                    <option value="">-- Elige un tablero --</option>
+                    {crmBoards.map((b: any) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              {crmBoardId && (
+                <div>
+                  <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1.5">
+                    2. Selecciona la Etapa Inicial
+                  </label>
+                  {crmStages.length === 0 ? (
+                    <p className="text-sm text-orange-500 font-bold">Este tablero no tiene etapas. Agrégalas primero en Pipeline.</p>
+                  ) : (
+                    <select
+                      value={crmStageId}
+                      onChange={(e) => setCrmStageId(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-indigo-500 outline-none text-black font-bold bg-white"
+                    >
+                      <option value="">-- Elige una etapa --</option>
+                      {crmStages.map((s: any) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => { setShowPipelineModal(false); setCrmBoardId(""); setCrmStageId(""); setCrmStages([]) }}
+                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSendToPipeline}
+                  disabled={!crmBoardId || !crmStageId || sendingToCrm}
+                  className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-colors disabled:opacity-50"
+                >
+                  {sendingToCrm ? "Enviando..." : "Enviar ✓"}
+                </button>
               </div>
             </div>
           </div>
