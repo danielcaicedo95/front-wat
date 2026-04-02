@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import KanbanBoard from "@/components/pipeline/KanbanBoard"
+import ContactsDirectory from "./contacts/page"
 
 type Board = {
   id: string
@@ -16,14 +17,15 @@ const BOARD_COLORS = [
 ]
 
 export default function PipelinePage() {
-  const [boards, setBoards] = useState<Board[]>([])
+  const [tab, setTab]                     = useState<"boards" | "contacts">("boards")
+  const [boards, setBoards]               = useState<Board[]>([])
   const [selectedBoard, setSelectedBoard] = useState<Board | null>(null)
-  const [showNewBoard, setShowNewBoard] = useState(false)
-  const [newName, setNewName] = useState("")
-  const [newDesc, setNewDesc] = useState("")
-  const [newColor, setNewColor] = useState(BOARD_COLORS[0])
-  const [creating, setCreating] = useState(false)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showNewBoard, setShowNewBoard]   = useState(false)
+  const [newName, setNewName]             = useState("")
+  const [newDesc, setNewDesc]             = useState("")
+  const [newColor, setNewColor]           = useState(BOARD_COLORS[0])
+  const [creating, setCreating]           = useState(false)
+  const [deletingId, setDeletingId]       = useState<string | null>(null)
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL!
 
@@ -80,22 +82,38 @@ export default function PipelinePage() {
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 border-b-2 border-gray-200 pb-5 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 border-b-2 border-gray-200 pb-5 gap-4">
         <div>
           <h2 className="text-3xl font-bold text-black border-l-4 border-indigo-500 pl-3">
             Pipeline CRM
           </h2>
           <p className="text-gray-500 mt-1 font-medium text-sm">
-            Gestiona tus campañas y el seguimiento de clientes con tableros Kanban.
+            Gestiona tus campañas y el seguimiento de clientes.
           </p>
         </div>
-        <button
-          onClick={() => setShowNewBoard(true)}
-          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-xl shadow transition-all whitespace-nowrap"
-        >
-          + Nueva Campaña
-        </button>
+        {tab === "boards" && (
+          <button
+            onClick={() => setShowNewBoard(true)}
+            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold rounded-xl shadow transition-all whitespace-nowrap"
+          >
+            + Nueva Campaña
+          </button>
+        )}
       </div>
+
+      {/* TABS */}
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-2xl w-fit mb-8">
+        {(["boards", "contacts"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className={`px-5 py-2 rounded-xl text-sm font-black transition-all
+              ${tab === t ? "bg-white text-black shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+            {t === "boards" ? "📋 Tableros" : "📇 Contactos"}
+          </button>
+        ))}
+      </div>
+
+      {/* CONTACTS VIEW */}
+      {tab === "contacts" && <ContactsDirectory />}
 
       {/* MODAL: CREAR TABLERO */}
       {showNewBoard && (
@@ -170,7 +188,7 @@ export default function PipelinePage() {
       )}
 
       {/* GRID DE TABLEROS */}
-      {boards.length === 0 ? (
+      {tab === "boards" && (boards.length === 0 ? (
         <div className="bg-gray-50 rounded-2xl p-12 text-center border-2 border-dashed border-gray-200">
           <p className="text-5xl mb-4">📋</p>
           <p className="text-xl font-bold text-gray-700">No tienes campañas aún</p>
@@ -236,7 +254,7 @@ export default function PipelinePage() {
             </div>
           ))}
         </div>
-      )}
+      ))}
     </div>
   )
 }
