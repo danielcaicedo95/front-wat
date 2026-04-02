@@ -6,15 +6,16 @@ import { useState } from 'react';
 import { HiMenu } from 'react-icons/hi';
 
 const navLinks = [
-  { name: 'Home', href: '/dashboard' },
-  { name: 'Sales', href: '/sales' },
-  { name: 'Pipeline', href: '/pipeline' },
-  { name: 'Inventory', href: '/inventory' },
-  { name: 'Messages', href: '/messages' },
-  { name: 'Analytics', href: '/analytics' },
-  { name: 'Deliveries', href: '/deliveries' },
-  { name: 'Flow Builder', href: '/flow' },
-  { name: 'Settings', href: '/settings' },
+  { name: '🏠 Home', href: '/dashboard' },
+  { name: '💰 Sales', href: '/sales' },
+  { name: '📊 Pipeline', href: '/pipeline' },
+  { name: '📦 Inventory', href: '/inventory' },
+  { name: '💬 Messages', href: '/messages' },
+  { name: '📈 Analytics', href: '/analytics' },
+  { name: '🚴 Deliveries', href: '/deliveries' },
+  { name: '⚡ Flow Builder', href: '/flow' },
+  { name: '💳 Pagos', href: '/settings/payments' },
+  { name: '⚙️ Settings', href: '/settings' },
 ];
 
 
