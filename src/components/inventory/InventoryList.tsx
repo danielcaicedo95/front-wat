@@ -1,7 +1,7 @@
 // src/components/inventory/InventoryList.tsx
 "use client"
 
-import { useEffect, useState, ChangeEvent } from "react"
+import React, { useEffect, useState, ChangeEvent, Fragment } from "react"
 import {
   getProducts,
   deleteProduct,
@@ -350,9 +350,8 @@ export default function InventoryList({ reloadFlag, onAction }: Props) {
                     : "bg-green-50 text-green-700 border-green-200"
 
                 return (
-                  <>
+                  <Fragment key={prod.id}>
                     <tr
-                      key={prod.id}
                       className={`hover:bg-gray-50/80 transition-colors cursor-pointer ${isExpanded ? "bg-gray-50/60" : ""}`}
                       onClick={() => setExpandedId(isExpanded ? null : prod.id)}
                     >
