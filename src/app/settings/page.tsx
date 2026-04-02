@@ -34,6 +34,17 @@ interface Settings {
   msg_location_required: string;
   msg_location_skip_button: string;
   msg_delivering_data_request: string;
+  // Mensajes de pago
+  msg_payment_choice: string;
+  msg_payment_choice_cod_btn: string;
+  msg_payment_choice_online_btn: string;
+  msg_payment_link: string;
+  msg_payment_link_required: string;
+  msg_payment_change_confirm: string;
+  msg_payment_change_confirm_yes_btn: string;
+  msg_payment_change_confirm_no_btn: string;
+  msg_payment_cod_choice: string;
+  msg_payment_cod_confirmed: string;
 }
 
 const MSG_DEFAULTS: Record<string, string> = {
@@ -312,6 +323,17 @@ export default function SettingsPage() {
           msg_location_required:         s.msg_location_required         || '',
           msg_location_skip_button:      s.msg_location_skip_button      || '',
           msg_delivering_data_request:   s.msg_delivering_data_request   || '',
+          // Mensajes de pago
+          msg_payment_choice:                s.msg_payment_choice                || '',
+          msg_payment_choice_cod_btn:        s.msg_payment_choice_cod_btn        || '',
+          msg_payment_choice_online_btn:     s.msg_payment_choice_online_btn     || '',
+          msg_payment_link:                  s.msg_payment_link                  || '',
+          msg_payment_link_required:         s.msg_payment_link_required         || '',
+          msg_payment_change_confirm:        s.msg_payment_change_confirm        || '',
+          msg_payment_change_confirm_yes_btn: s.msg_payment_change_confirm_yes_btn || '',
+          msg_payment_change_confirm_no_btn:  s.msg_payment_change_confirm_no_btn  || '',
+          msg_payment_cod_choice:            s.msg_payment_cod_choice            || '',
+          msg_payment_cod_confirmed:         s.msg_payment_cod_confirmed         || '',
         });
         setLoading(false);
       })
@@ -532,6 +554,53 @@ export default function SettingsPage() {
             <MsgField label="Texto al pedir ubicación (obligatoria)" hint='Se muestra con solo el botón de enviar ubicación. No tiene opción de saltar.'
               fieldKey="msg_location_required" value={settings.msg_location_required} onChange={patchStr} />
           </Section>
+
+          {/* Mensajes de Pago Online — solo visibles si hay modo de pago activo */}
+          <Section icon="💳" title="Mensajes de Pago Online" description="Textos del flujo de pago con pasarela (Wompi / MercadoPago)">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700">
+              <strong>💡 Variables disponibles:</strong>&nbsp;
+              <code className="bg-blue-100 px-1 rounded">{'{{link}}'}</code> → URL de pago &nbsp;
+              <code className="bg-blue-100 px-1 rounded">{'{{total}}'}</code> → Monto &nbsp;
+              <code className="bg-blue-100 px-1 rounded">{'{{metodo}}'}</code> → Método elegido
+            </div>
+
+            <MsgField label="[Modo opcional] Mensaje de elección de pago"
+              hint='Aparece con 2 botones: contraentrega y pagar ahora.'
+              fieldKey="msg_payment_choice" value={settings.msg_payment_choice} onChange={patchStr} />
+            <div className="grid grid-cols-2 gap-4">
+              <MsgField label="Botón: Contraentrega (máx 20 chars)" hint='Ej: Pago contraentrega 🏠'
+                fieldKey="msg_payment_choice_cod_btn" value={settings.msg_payment_choice_cod_btn} onChange={patchStr} multiline={false} />
+              <MsgField label="Botón: Pagar ahora (máx 20 chars)" hint='Ej: Pagar ahora 💳'
+                fieldKey="msg_payment_choice_online_btn" value={settings.msg_payment_choice_online_btn} onChange={patchStr} multiline={false} />
+            </div>
+
+            <MsgField label="[Modo opcional] Mensaje con link de pago"
+              hint='Se envía después de que el cliente presiona "Pagar ahora". Usa {{link}} y {{total}}.'
+              fieldKey="msg_payment_link" value={settings.msg_payment_link} onChange={patchStr} />
+
+            <MsgField label="[Modo obligatorio] Mensaje con link de pago"
+              hint='Se envía automáticamente al confirmar el pedido. Usa {{link}} y {{total}}.'
+              fieldKey="msg_payment_link_required" value={settings.msg_payment_link_required} onChange={patchStr} />
+
+            <MsgField label="Mensaje: ¿Cambiar método de pago?"
+              hint='Pregunta al cliente si quiere cambiar después de ver el link.'
+              fieldKey="msg_payment_change_confirm" value={settings.msg_payment_change_confirm} onChange={patchStr} multiline={false} />
+            <div className="grid grid-cols-2 gap-4">
+              <MsgField label="Botón: Sí, cambiar (máx 20 chars)"
+                fieldKey="msg_payment_change_confirm_yes_btn" value={settings.msg_payment_change_confirm_yes_btn} onChange={patchStr} multiline={false} />
+              <MsgField label="Botón: No, está bien (máx 20 chars)"
+                fieldKey="msg_payment_change_confirm_no_btn" value={settings.msg_payment_change_confirm_no_btn} onChange={patchStr} multiline={false} />
+            </div>
+
+            <MsgField label="Mensaje: Elección de método contraentrega"
+              hint='Aparece cuando el cliente elige pagar al recibir.'
+              fieldKey="msg_payment_cod_choice" value={settings.msg_payment_cod_choice} onChange={patchStr} multiline={false} />
+
+            <MsgField label="Mensaje: Confirmación de pago contraentrega"
+              hint='Se envía cuando el cliente elige su método contraentrega. Usa {{metodo}} y {{total}}.'
+              fieldKey="msg_payment_cod_confirmed" value={settings.msg_payment_cod_confirmed} onChange={patchStr} />
+          </Section>
+
         </div>
       )}
 
