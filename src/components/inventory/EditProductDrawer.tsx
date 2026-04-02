@@ -340,23 +340,8 @@ export default function EditProductDrawer({ product, onClose, onSaved }: Props) 
                                 <input
                                     ref={generalFileRef} type="file" multiple accept="image/*" className="sr-only"
                                     onChange={e => {
-                                        console.log("▶ EVENTO ONCHANGE DISPARADO", e);
-                                        console.log("▶ ARCHIVOS:", e.target.files);
-                                        if (!e.target.files || e.target.files.length === 0) {
-                                            console.warn("No hay archivos seleccionados");
-                                            return;
-                                        }
-                                        try {
-                                            const fileArr = Array.from(e.target.files);
-                                            console.log("▶ ARCHIVOS PROCESADOS:", fileArr);
-                                            setNewGeneralImages(prev => {
-                                                const newArr = [...prev, ...fileArr].slice(0, 10);
-                                                console.log("▶ NUEVO ESTADO DE IMAGENES:", newArr);
-                                                return newArr;
-                                            });
-                                        } catch (err) {
-                                            console.error("▶ ERROR PROCESANDO ARCHIVOS:", err);
-                                        }
+                                        if (!e.target.files) return
+                                        setNewGeneralImages(prev => [...prev, ...Array.from(e.target.files!)].slice(0, 10))
                                         if (generalFileRef.current) generalFileRef.current.value = ""
                                     }}
                                 />
