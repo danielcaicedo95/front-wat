@@ -312,8 +312,9 @@ export default function EditProductDrawer({ product, onClose, onSaved }: Props) 
                                         <div key={img.id} className="relative group">
                                             <img src={img.url} alt="" className="w-full aspect-square object-cover rounded-lg border border-gray-200" />
                                             <button
+                                                type="button"
                                                 onClick={() => setDeletedImageIds(prev => [...prev, img.id])}
-                                                className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs shadow"
+                                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600 transition-colors z-10 font-bold"
                                             >×</button>
                                         </div>
                                     ))}
@@ -322,8 +323,9 @@ export default function EditProductDrawer({ product, onClose, onSaved }: Props) 
                                             <img src={URL.createObjectURL(f)} alt="" className="w-full aspect-square object-cover rounded-lg border-2 border-dashed border-[#008060]/40" />
                                             <div className="absolute top-1 left-1 bg-[#008060] text-white text-[10px] px-1.5 py-0.5 rounded font-bold">NEW</div>
                                             <button
+                                                type="button"
                                                 onClick={() => setNewGeneralImages(prev => prev.filter((_, idx) => idx !== i))}
-                                                className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs shadow"
+                                                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600 transition-colors z-10 font-bold"
                                             >×</button>
                                         </div>
                                     ))}
@@ -520,6 +522,7 @@ function VariantCard({
                     {isNew && <span className="text-xs font-bold text-[#008060] bg-[#008060]/10 px-1.5 py-0.5 rounded">NUEVA</span>}
                 </div>
                 <button
+                    type="button"
                     onClick={onDelete}
                     className="flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded-md transition-colors"
                 >
@@ -604,6 +607,7 @@ function VariantCard({
                                         onChange={e => e.target.files?.[0] && onSetImage(e.target.files[0])} />
                                 </label>
                                 <button
+                                    type="button"
                                     onClick={onDeleteImage}
                                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                                 >
