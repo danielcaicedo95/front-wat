@@ -529,7 +529,7 @@ export default function InventoryList({ reloadFlag, onAction }: Props) {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 )
               })}
             </tbody>
