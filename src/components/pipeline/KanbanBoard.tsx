@@ -256,6 +256,7 @@ export default function KanbanBoard({ board, onBack, apiUrl }: KanbanBoardProps)
   const [editNotes, setEditNotes]         = useState("")
   const [editValue, setEditValue]         = useState("")
   const [savingDeal, setSavingDeal]       = useState(false)
+  const [actionLoading, setActionLoading] = useState<"delivered" | "cancelled" | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -339,6 +340,28 @@ export default function KanbanBoard({ board, onBack, apiUrl }: KanbanBoardProps)
 
   const openDeal = (deal: Deal) => {
     setSelectedDeal(deal); setEditNotes(deal.notes || ""); setEditValue(deal.value?.toString() || "0"); setDealTab("info")
+  }
+
+  const handleMarkDelivered = async () => {
+    if (!selectedDeal) return
+    if (!confirm("¿Marcar este pedido como Entregado? Se moverá a la etapa final.")) return
+    setActionLoading("delivered")
+    try {
+      const res = await fetch(`${apiUrl}/crm/deals/${selectedDeal.id}/mark-delivered`, { method: "POST" })
+      if (res.ok) { setSelectedDeal(null); fetchData() }
+      else { alert("Error al marcar como entregado.") }
+    } finally { setActionLoading(null) }
+  }
+
+  const handleMarkCancelled = async () => {
+    if (!selectedDeal) return
+    if (!confirm("¿Mover a Cancelado / Devolución? El valor del deal se pondrá en $0 para no afectar las métricas de ingresos.")) return
+    setActionLoading("cancelled")
+    try {
+      const res = await fetch(`${apiUrl}/crm/deals/${selectedDeal.id}/mark-cancelled`, { method: "POST" })
+      if (res.ok) { setSelectedDeal(null); fetchData() }
+      else { alert("Error al cancelar el deal.") }
+    } finally { setActionLoading(null) }
   }
 
   if (loading) return (
@@ -605,15 +628,36 @@ export default function KanbanBoard({ board, onBack, apiUrl }: KanbanBoardProps)
             </div>
             {/* Footer */}
             {dealTab === "info" && (
-              <div className="flex items-center justify-between gap-3 px-6 py-4 border-t-2 border-gray-100 flex-shrink-0">
-                <button onClick={() => handleDeleteDeal(selectedDeal.id)}
-                  className="px-4 py-2.5 rounded-xl text-sm font-bold bg-red-50 text-red-600 hover:bg-red-100 border-2 border-red-100 transition-colors">
-                  🗑️ Eliminar
-                </button>
-                <button onClick={handleSaveDeal} disabled={savingDeal}
-                  className="px-6 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50">
-                  {savingDeal ? "Guardando..." : "💾 Guardar"}
-                </button>
+              <div className="flex flex-col gap-2 px-6 py-4 border-t-2 border-gray-100 flex-shrink-0">
+                {/* Quick Actions for linked orders */}
+                {selectedDeal.order_id && (
+                  <div className="flex gap-2 pb-2">
+                    <button
+                      onClick={handleMarkDelivered}
+                      disabled={actionLoading !== null}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-green-50 text-green-700 hover:bg-green-500 hover:text-white border-2 border-green-200 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                    >
+                      {actionLoading === "delivered" ? <span className="animate-spin">⟳</span> : "🎉"} Marcar Entregado
+                    </button>
+                    <button
+                      onClick={handleMarkCancelled}
+                      disabled={actionLoading !== null}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-red-50 text-red-600 hover:bg-red-500 hover:text-white border-2 border-red-200 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                    >
+                      {actionLoading === "cancelled" ? <span className="animate-spin">⟳</span> : "🛑"} Cancelar / Dev.
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <button onClick={() => handleDeleteDeal(selectedDeal.id)}
+                    className="px-4 py-2.5 rounded-xl text-sm font-bold bg-red-50 text-red-600 hover:bg-red-100 border-2 border-red-100 transition-colors">
+                    🗑️ Eliminar
+                  </button>
+                  <button onClick={handleSaveDeal} disabled={savingDeal}
+                    className="px-6 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors disabled:opacity-50">
+                    {savingDeal ? "Guardando..." : "💾 Guardar"}
+                  </button>
+                </div>
               </div>
             )}
           </div>
