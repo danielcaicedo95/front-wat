@@ -120,45 +120,86 @@ export default function AudienceList({ type }: { type: 'abandoned' | 'leads' }) 
 
   return (
     <div className="mt-6">
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {sessions.map((session) => (
-          <div 
-            key={session.phone_number}
-            onClick={() => setSelectedSession(session)}
-            className="relative border-2 border-gray-200 shadow-sm rounded-2xl p-6 cursor-pointer bg-white transition-all hover:-translate-y-1 hover:shadow-xl group"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex-1 truncate">
-                <p className="font-extrabold text-xl text-black truncate flex items-center gap-2">
-                  {type === 'abandoned' ? '🛒 Carrito Abandonado' : '💬 Lead Fresco'}
-                </p>
-                <p className="text-gray-900 font-medium text-sm mt-1">
-                  Última actividad: {new Date(session.updated_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                </p>
-              </div>
-              <div className="border px-3 py-1.5 rounded-xl text-sm font-black shadow-sm bg-blue-50 text-blue-900 border-blue-200">
-                ${(session.cart?.subtotal || 0).toLocaleString()}
-              </div>
-            </div>
+      {/* TABLA ESTILO SHOPIFY PARA AUDIENCIAS */}
+      <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-sm overflow-x-auto">
+        <table className="w-full text-left border-collapse whitespace-nowrap">
+          <thead>
+            <tr className="bg-gray-50 border-b-2 border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
+              <th className="p-4 font-bold">Contacto</th>
+              <th className="p-4 font-bold">Etapa</th>
+              <th className="p-4 font-bold">Última Actividad</th>
+              <th className="p-4 font-bold">Interés Principal</th>
+              <th className="p-4 font-bold text-right">Valor Proyectado</th>
+              <th className="p-4 font-bold text-right"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {sessions.map((session) => (
+              <tr 
+                key={session.phone_number}
+                onClick={() => setSelectedSession(session)}
+                className="transition-colors group hover:bg-gray-50 cursor-pointer bg-white"
+              >
+                <td className="p-4">
+                  <p className="font-extrabold text-sm text-gray-900 border border-gray-200 px-2 py-1 rounded-lg inline-block bg-gray-50">
+                    📞 {session.phone_number}
+                  </p>
+                </td>
+                
+                <td className="p-4">
+                  {type === 'abandoned' ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold leading-4 bg-orange-100 text-orange-800 border-2 border-orange-200">
+                      🛒 Carrito Abandonado
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold leading-4 bg-purple-100 text-purple-800 border-2 border-purple-200">
+                      💬 Lead Fresco
+                    </span>
+                  )}
+                </td>
 
-            <div className="mb-4">
-              <span className="bg-gray-100 border border-gray-200 text-black font-bold px-3 py-1.5 rounded-lg text-sm block text-center mb-3">
-                📞 {session.phone_number}
-              </span>
-              {type === 'abandoned' && session.cart?.products && (
-                <p className="text-sm text-gray-600 font-medium truncate">
-                  <span className="font-bold text-gray-800">Interés:</span> {session.cart.products.map(p => p.name).join(', ')}
-                </p>
-              )}
-            </div>
-            
-            <div className="flex justify-end pt-4 border-t-2 border-gray-100">
-              <span className="text-indigo-600 bg-indigo-50 px-3 py-1 rounded-xl text-sm font-bold flex items-center gap-1 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                Recuperar <span className="text-lg">→</span>
-              </span>
-            </div>
-          </div>
-        ))}
+                <td className="p-4">
+                  <p className="text-sm font-medium text-gray-700">
+                    {new Date(session.updated_at).toLocaleDateString()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {new Date(session.updated_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </p>
+                </td>
+
+                <td className="p-4">
+                  {type === 'abandoned' && session.cart?.products && session.cart.products.length > 0 ? (
+                    <div className="flex items-center gap-1.5 truncate max-w-[200px]" title={session.cart.products.map(p => p.name).join(', ')}>
+                      <span className="text-xs font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200 truncate">
+                        {session.cart.products[0].name}
+                      </span>
+                      {session.cart.products.length > 1 && (
+                        <span className="text-xs font-bold text-gray-500">+{session.cart.products.length - 1}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs font-medium text-gray-400 italic">Conversación en curso...</span>
+                  )}
+                </td>
+
+                <td className="p-4 text-right">
+                  <span className="font-black text-sm text-gray-900">
+                    ${(session.cart?.subtotal || 0).toLocaleString()}
+                  </span>
+                </td>
+
+                <td className="p-4 text-right">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setSelectedSession(session); }}
+                    className="text-indigo-600 hover:text-indigo-900 text-xs font-bold hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
+                  >
+                    Detalles &rarr;
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Modal / Ficha de la sesión */}

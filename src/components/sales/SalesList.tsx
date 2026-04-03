@@ -12,6 +12,7 @@ type Order = {
   products: { name: string; quantity: number }[]
   created_at: string
   status?: string // 'pending', 'completed', 'cancelled'
+  payment_status?: string
 }
 
 const ITEMS_PER_PAGE = 30;
@@ -349,69 +350,115 @@ export default function SalesList() {
             </div>
           </div>
 
-          {/* GRID DE PEDIDOS */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {currentOrders.map(order => {
-              const checked = selectedOrderIds.has(order.id);
-              const isCancelled = order.status === 'cancelled';
-              const isCompleted = order.status === 'completed';
-              
-              return (
-              <div 
-                key={order.id} 
-                onClick={() => setSelectedOrder(order)}
-                className={`
-                  relative border-2 shadow-sm rounded-2xl p-6 cursor-pointer transition-all flex flex-col justify-between group
-                  hover:-translate-y-1 hover:shadow-xl
-                  ${checked ? 'border-indigo-400 bg-indigo-50/20' : 'border-gray-200 bg-white'}
-                  ${isCancelled ? 'opacity-80' : ''}
-                `}
-              >
-                {/* STATUS INDICATOR ABSOLUTE */}
-                {isCancelled && (
-                  <div className="absolute top-0 right-0 transform translate-x-2 -translate-y-2">
-                    <span className="relative flex h-4 w-4">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 shadow" title="Cancelada"></span>
-                    </span>
-                  </div>
-                )}
-                {isCompleted && (
-                  <div className="absolute top-[-10px] right-[-10px] bg-green-500 text-white text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full shadow-md z-10 border-2 border-white">
-                    Realizada
-                  </div>
-                )}
-
-                <div className="flex justify-between items-start mb-4 gap-3">
-                  <div className="mt-1" onClick={e => toggleSelection(order.id, e)}>
+          {/* TABLA ESTILO SHOPIFY */}
+          <div className="bg-white rounded-2xl border-2 border-gray-200 shadow-sm overflow-x-auto">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
+              <thead>
+                <tr className="bg-gray-50 border-b-2 border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
+                  <th className="p-4 w-12 text-center align-middle">
                     <input 
                       type="checkbox" 
-                      className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer pointer-events-none" 
-                      checked={checked} 
-                      readOnly
+                      checked={isAllCurrentSelected} 
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
-                  </div>
-                  <div className="flex-1 pr-1 truncate">
-                    <p className={`font-extrabold text-xl truncate ${isCancelled ? 'line-through text-gray-500' : 'text-black'}`} title={order.name}>
-                      {order.name}
-                    </p>
-                    <p className="text-gray-900 font-medium text-sm mt-1">{new Date(order.created_at).toLocaleDateString()} • {new Date(order.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
-                  </div>
-                  <div className={`border px-3 py-1.5 rounded-xl text-sm font-black shadow-sm whitespace-nowrap ${isCancelled ? 'bg-gray-100 text-gray-400 border-gray-200 line-through' : 'bg-green-100 text-green-900 border-green-200'}`}>
-                    ${order.total.toLocaleString()}
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-end mt-4 pt-4 border-t-2 border-gray-100">
-                  <span className="text-xs font-black text-black uppercase tracking-wider bg-gray-100 px-2 py-1 rounded-lg">
-                    {order.payment_method}
-                  </span>
-                  <span className="text-indigo-600 bg-indigo-50 px-3 py-1 rounded-xl text-sm font-bold flex items-center gap-1 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                    Ver ficha <span className="text-lg">→</span>
-                  </span>
-                </div>
-              </div>
-            )})}
+                  </th>
+                  <th className="p-4 font-bold">Cliente</th>
+                  <th className="p-4 font-bold">Fecha</th>
+                  <th className="p-4 font-bold text-center">Estado</th>
+                  <th className="p-4 font-bold">Método</th>
+                  <th className="p-4 font-bold text-right">Total</th>
+                  <th className="p-4 font-bold text-right"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {currentOrders.map(order => {
+                  const checked = selectedOrderIds.has(order.id);
+                  const isCancelled = order.status === 'cancelled';
+                  const isCompleted = order.status === 'completed';
+                  const isPaid = order.payment_status === 'paid' || order.status === 'confirmed';
+                  
+                  return (
+                    <tr 
+                      key={order.id} 
+                      className={`
+                        transition-colors group hover:bg-gray-50
+                        ${checked ? 'bg-indigo-50/50' : 'bg-white'}
+                        ${isCancelled ? 'opacity-70' : ''}
+                      `}
+                    >
+                      <td className="p-4 text-center align-middle border-r border-gray-50">
+                        <input 
+                          type="checkbox" 
+                          checked={checked}
+                          onChange={(e) => toggleSelection(order.id, e as any)}
+                          className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                      </td>
+                      
+                      <td className="p-4 cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                        <p className={`font-extrabold text-sm ${isCancelled ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                          {order.name}
+                        </p>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">
+                          {order.phone_number}
+                        </p>
+                      </td>
+
+                      <td className="p-4 cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                        <p className="text-sm font-medium text-gray-700">
+                          {new Date(order.created_at).toLocaleDateString()}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {new Date(order.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </p>
+                      </td>
+
+                      <td className="p-4 text-center cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                        {isCancelled ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold leading-4 bg-red-100 text-red-800 border-2 border-red-200">
+                            Cancelada
+                          </span>
+                        ) : isPaid ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold leading-4 bg-blue-100 text-blue-800 border-2 border-blue-200 animate-pulse">
+                            💳 Pagado
+                          </span>
+                        ) : isCompleted ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold leading-4 bg-green-100 text-green-800 border-2 border-green-200">
+                            Realizada
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold leading-4 bg-yellow-100 text-yellow-800 border-2 border-yellow-200">
+                            Pendiente
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="p-4 cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                        <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded-md border border-gray-200">
+                          {order.payment_method}
+                        </span>
+                      </td>
+
+                      <td className="p-4 text-right cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                        <span className={`font-black text-sm ${isCancelled ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                          ${order.total.toLocaleString()}
+                        </span>
+                      </td>
+
+                      <td className="p-4 text-right">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
+                          className="text-indigo-600 hover:text-indigo-900 text-xs font-bold hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors border border-transparent hover:border-indigo-100"
+                        >
+                          Ver ficha &rarr;
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
           
           {/* CONTROL DE PAGINACIÓN */}
@@ -456,8 +503,9 @@ export default function SalesList() {
             <div className="bg-gray-100 px-6 py-4 border-b-2 border-gray-200 flex justify-between items-center sticky top-0 z-10 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <h3 className="text-2xl font-black text-black tracking-tight">Ficha del Pedido</h3>
-                {selectedOrder.status === 'completed' && <span className="bg-green-500 text-white text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full shadow-md">Realizada</span>}
+                {selectedOrder.status === 'completed' && selectedOrder.payment_status !== 'paid' && <span className="bg-green-500 text-white text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full shadow-md">Realizada</span>}
                 {selectedOrder.status === 'cancelled' && <span className="bg-red-500 text-white text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full shadow-md">Cancelada</span>}
+                {(selectedOrder.payment_status === 'paid' || selectedOrder.status === 'confirmed') && <span className="bg-blue-600 text-white text-[10px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full shadow-md">💳 Pagado</span>}
               </div>
               <button 
                 onClick={() => setSelectedOrder(null)}
