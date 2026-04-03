@@ -1,5 +1,6 @@
-"use client"
+"use client";
 import { useEffect, useState } from "react"
+import AudienceList from "./AudienceList"
 
 type Order = {
   id: string
@@ -33,6 +34,7 @@ const renderTextWithLinksAndBreaks = (text: string) => {
 export default function SalesList() {
   const [orders, setOrders] = useState<Order[]>([])
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [activeTab, setActiveTab] = useState<'confirmed' | 'pending' | 'abandoned' | 'leads'>('confirmed')
   
   // CRM States
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set())
@@ -154,9 +156,16 @@ export default function SalesList() {
     }
   }
 
+  // Filtrado por Tabs
+  const filteredOrders = orders.filter(o => 
+    activeTab === 'pending' 
+      ? o.status === 'awaiting_payment'
+      : o.status !== 'awaiting_payment'
+  );
+
   // Paginación
-  const totalPages = Math.ceil(orders.length / ITEMS_PER_PAGE) || 1;
-  const currentOrders = orders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE) || 1;
+  const currentOrders = filteredOrders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   // Checkboxes
   const toggleSelection = (id: string, e: React.MouseEvent) => {
@@ -248,6 +257,50 @@ export default function SalesList() {
             Gestiona tus pedidos. Total histórico: {orders.length}
           </p>
         </div>
+
+        {/* TABS DE ESTADO */}
+        <div className="flex flex-wrap bg-gray-100 p-1 rounded-xl shadow-inner mt-4 sm:mt-0 max-w-2xl gap-1">
+          <button
+            onClick={() => { setActiveTab('confirmed'); setCurrentPage(1); setSelectedOrderIds(new Set()); }}
+            className={`flex-1 px-3 py-2 text-sm font-bold rounded-lg transition-all whitespace-nowrap ${
+              activeTab === 'confirmed' 
+                ? 'bg-white text-indigo-700 shadow-sm border border-gray-200' 
+                : 'text-gray-500 hover:text-black hover:bg-gray-200'
+            }`}
+          >
+            Ventas Exitosas ✅
+          </button>
+          <button
+            onClick={() => { setActiveTab('pending'); setCurrentPage(1); setSelectedOrderIds(new Set()); }}
+            className={`flex-1 px-3 py-2 text-sm font-bold rounded-lg transition-all whitespace-nowrap ${
+              activeTab === 'pending' 
+                ? 'bg-white text-orange-600 shadow-sm border border-gray-200' 
+                : 'text-gray-500 hover:text-black hover:bg-gray-200'
+            }`}
+          >
+            Pendientes (Checkout) ⏳
+          </button>
+          <button
+            onClick={() => { setActiveTab('abandoned'); }}
+            className={`flex-1 px-3 py-2 text-sm font-bold rounded-lg transition-all whitespace-nowrap ${
+              activeTab === 'abandoned' 
+                ? 'bg-white text-rose-600 shadow-sm border border-gray-200' 
+                : 'text-gray-500 hover:text-black hover:bg-gray-200'
+            }`}
+          >
+            Carritos Abandonados 🛒
+          </button>
+          <button
+            onClick={() => { setActiveTab('leads'); }}
+            className={`flex-1 px-3 py-2 text-sm font-bold rounded-lg transition-all whitespace-nowrap ${
+              activeTab === 'leads' 
+                ? 'bg-white text-emerald-600 shadow-sm border border-gray-200' 
+                : 'text-gray-500 hover:text-black hover:bg-gray-200'
+            }`}
+          >
+            Solo Preguntaron 💬
+          </button>
+        </div>
         
         {/* BARRA FLOTANTE DE ACCIONES MASIVAS (Aparece sólo si hay items checkeados) */}
         {selectedOrderIds.size > 0 && (
@@ -270,9 +323,13 @@ export default function SalesList() {
         )}
       </div>
 
-      {orders.length === 0 ? (
-        <div className="bg-gray-50 rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 text-black font-medium text-lg">
-          No hay ventas registradas aún en el sistema.
+      {activeTab === 'abandoned' || activeTab === 'leads' ? (
+        <AudienceList type={activeTab} />
+      ) : filteredOrders.length === 0 ? (
+        <div className="bg-gray-50 rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 text-black font-medium text-lg mt-4">
+          {activeTab === 'pending' 
+            ? 'No hay ningún cliente pendiente de pago en este momento.'
+            : 'No hay ventas confirmadas registradas aún en el sistema.'}
         </div>
       ) : (
         <>
