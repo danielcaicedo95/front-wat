@@ -9,7 +9,7 @@
  *   const res = await fetchWithAuth(`${API_URL}/crm/boards`);
  */
 
-const DASHBOARD_API_KEY = process.env.NEXT_PUBLIC_DASHBOARD_API_KEY || '';
+const DASHBOARD_API_KEY = process.env.NEXT_PUBLIC_API_KEY || process.env.NEXT_PUBLIC_DASHBOARD_API_KEY || '';
 
 export function fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
   const headers = new Headers(options.headers as HeadersInit);
