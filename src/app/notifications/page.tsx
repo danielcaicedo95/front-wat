@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -27,7 +28,7 @@ export default function NotificationsSetupPage() {
 
     // Comprobar cuántas suscripciones hay en el backend
     useEffect(() => {
-        fetch(`${API_URL}/notifications/subscriptions-count?tenant_id=default`)
+        fetchWithAuth(`${API_URL}/notifications/subscriptions-count?tenant_id=default`)
             .then(r => r.ok ? r.json() : null)
             .then(d => { if (d?.count !== undefined) setSubCount(d.count); })
             .catch(() => { });
@@ -46,7 +47,7 @@ export default function NotificationsSetupPage() {
         setTestLoading(true);
         setTestResult('');
         try {
-            const res = await fetch(`${API_URL}/notifications/test-push`, {
+            const res = await fetchWithAuth(`${API_URL}/notifications/test-push`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tenant_id: 'default' }),

@@ -1,6 +1,19 @@
 // frontend/src/lib/api.ts
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const DASHBOARD_API_KEY = process.env.NEXT_PUBLIC_DASHBOARD_API_KEY || '';
+
+/**
+ * Wrapper de fetch que inyecta automáticamente el header X-API-Key
+ * en todas las llamadas al backend del dashboard.
+ */
+export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(options.headers as HeadersInit);
+  if (DASHBOARD_API_KEY) {
+    headers.set('X-API-Key', DASHBOARD_API_KEY);
+  }
+  return fetch(url, { ...options, headers });
+}
 
 // Tipos que coinciden con tu estructura de datos de `InventoryList`
 export interface Variant {
@@ -40,7 +53,7 @@ export interface Product {
  * Obtiene todos los productos desde el backend.
  */
 export async function getProducts(): Promise<Product[]> {
-  const response = await fetch(`${API_URL}/products/`);
+  const response = await apiFetch(`${API_URL}/products/`);
   if (!response.ok) {
     throw new Error('Failed to fetch products');
   }
@@ -51,7 +64,7 @@ export async function getProducts(): Promise<Product[]> {
  * Crea un nuevo producto.
  */
 export async function createProduct(formData: FormData): Promise<Product> {
-  const response = await fetch(`${API_URL}/products/`, {
+  const response = await apiFetch(`${API_URL}/products/`, {
     method: 'POST',
     body: formData,
   });
@@ -66,7 +79,7 @@ export async function createProduct(formData: FormData): Promise<Product> {
  * Elimina un producto por su ID.
  */
 export async function deleteProduct(productId: string): Promise<void> {
-  const response = await fetch(`${API_URL}/products/${productId}`, {
+  const response = await apiFetch(`${API_URL}/products/${productId}`, {
     method: 'DELETE',
   });
   if (!response.ok) {
@@ -79,7 +92,7 @@ export async function deleteProduct(productId: string): Promise<void> {
  */
 export async function deleteVariant(variantId: string): Promise<void> {
   // Nota el cambio en la URL para que coincida con el nuevo endpoint del backend
-  const response = await fetch(`${API_URL}/products/variants/${variantId}`, {
+  const response = await apiFetch(`${API_URL}/products/variants/${variantId}`, {
     method: 'DELETE',
   });
   if (!response.ok) {
@@ -88,7 +101,7 @@ export async function deleteVariant(variantId: string): Promise<void> {
 }
 
 export async function updateProductStock(productId: string, newStock: number): Promise<void> {
-  const response = await fetch(`${API_URL}/products/${productId}`, {
+  const response = await apiFetch(`${API_URL}/products/${productId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ stock: newStock }),
@@ -102,7 +115,7 @@ export async function updateProductStock(productId: string, newStock: number): P
 export async function updateProduct(productId: string, data: {
   name?: string; description?: string; price?: number; stock?: number; category_id?: string;
 }): Promise<void> {
-  const response = await fetch(`${API_URL}/products/${productId}`, {
+  const response = await apiFetch(`${API_URL}/products/${productId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -117,7 +130,7 @@ export async function updateProduct(productId: string, data: {
  * Actualiza opciones, precio o stock de una variante.
  */
 export async function updateVariantStock(variantId: string, newStock: number): Promise<void> {
-  const response = await fetch(`${API_URL}/products/variants/${variantId}`, {
+  const response = await apiFetch(`${API_URL}/products/variants/${variantId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ stock: newStock }),
@@ -128,7 +141,7 @@ export async function updateVariantStock(variantId: string, newStock: number): P
 export async function updateVariant(variantId: string, data: {
   options?: Record<string, string>; price?: number; stock?: number;
 }): Promise<void> {
-  const response = await fetch(`${API_URL}/products/variants/${variantId}`, {
+  const response = await apiFetch(`${API_URL}/products/variants/${variantId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -146,7 +159,7 @@ export async function addProductImage(productId: string, file: File, variantId?:
   const formData = new FormData();
   formData.append('image', file);
   if (variantId) formData.append('variant_id', variantId);
-  const response = await fetch(`${API_URL}/products/${productId}/images`, {
+  const response = await apiFetch(`${API_URL}/products/${productId}/images`, {
     method: 'POST',
     body: formData,
   });
@@ -158,7 +171,7 @@ export async function addProductImage(productId: string, file: File, variantId?:
  * Elimina una imagen específica de un producto.
  */
 export async function deleteProductImage(imageId: string): Promise<void> {
-  const response = await fetch(`${API_URL}/products/images/${imageId}`, { method: 'DELETE' });
+  const response = await apiFetch(`${API_URL}/products/images/${imageId}`, { method: 'DELETE' });
   if (!response.ok) throw new Error('Failed to delete image');
 }
 
@@ -174,7 +187,7 @@ export async function addVariantToProduct(productId: string, data: {
   if (data.price !== undefined) formData.append('price', String(data.price));
   if (data.stock !== undefined) formData.append('stock', String(data.stock));
   if (data.image) formData.append('image', data.image);
-  const response = await fetch(`${API_URL}/products/${productId}/variants`, { method: 'POST', body: formData });
+  const response = await apiFetch(`${API_URL}/products/${productId}/variants`, { method: 'POST', body: formData });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new Error(err.detail || 'Failed to add variant');
@@ -189,7 +202,7 @@ export async function setVariantImage(variantId: string, productId: string, file
   const formData = new FormData();
   formData.append('product_id', productId);
   formData.append('image', file);
-  const response = await fetch(`${API_URL}/products/variants/${variantId}/image`, { method: 'POST', body: formData });
+  const response = await apiFetch(`${API_URL}/products/variants/${variantId}/image`, { method: 'POST', body: formData });
   if (!response.ok) throw new Error('Failed to set variant image');
   return response.json();
 }
@@ -200,13 +213,13 @@ export async function setVariantImage(variantId: string, productId: string, file
 // ==========================================
 
 export async function getCategories(): Promise<Category[]> {
-  const response = await fetch(`${API_URL}/categories`);
+  const response = await apiFetch(`${API_URL}/categories`);
   if (!response.ok) throw new Error('Failed to fetch categories');
   return response.json();
 }
 
 export async function createCategory(data: Partial<Category>): Promise<Category> {
-  const response = await fetch(`${API_URL}/categories`, {
+  const response = await apiFetch(`${API_URL}/categories`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -221,7 +234,7 @@ export async function createCategory(data: Partial<Category>): Promise<Category>
 export async function updateCategory(categoryId: string, data: {
   name?: string; description?: string; parent_id?: string;
 }): Promise<void> {
-  const response = await fetch(`${API_URL}/categories/${categoryId}`, {
+  const response = await apiFetch(`${API_URL}/categories/${categoryId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -233,7 +246,7 @@ export async function updateCategory(categoryId: string, data: {
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  const response = await fetch(`${API_URL}/categories/${id}`, { method: 'DELETE' });
+  const response = await apiFetch(`${API_URL}/categories/${id}`, { method: 'DELETE' });
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.detail || 'Failed to delete category');

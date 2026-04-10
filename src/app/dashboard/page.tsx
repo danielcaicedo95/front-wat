@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { fetchWithAuth, API_URL as API_BASE } from '@/lib/fetchWithAuth';
 
 // ── WhatsApp Business Categories ─────────────────────────────────────────────
 const WA_CATEGORIES = [
@@ -179,7 +178,7 @@ export default function HomePage() {
     try {
       const form = new FormData();
       form.append('image', file);
-      const res = await fetch(`${API_BASE}/api/settings/logo`, { method: 'POST', body: form });
+      const res = await fetchWithAuth(`${API_BASE}/api/settings/logo`, { method: 'POST', body: form });
       if (res.ok) {
         const data = await res.json();
         setBrand((b) => ({ ...b, business_logo_url: data.url }));
@@ -203,7 +202,7 @@ export default function HomePage() {
     setSaving(true);
     const payloadToSave = { ...brand, business_schedule: JSON.stringify(schedule) };
     try {
-      const res = await fetch(`${API_BASE}/api/settings`, {
+      const res = await fetchWithAuth(`${API_BASE}/api/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payloadToSave),
@@ -219,7 +218,7 @@ export default function HomePage() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = await fetch(`${API_BASE}/api/settings/sync-whatsapp`, { method: 'POST' });
+      const res = await fetchWithAuth(`${API_BASE}/api/settings/sync-whatsapp`, { method: 'POST' });
       const data = await res.json();
       setSyncResult(data);
       showToast(data.status === 'ok' ? 'success' : 'info', data.message);

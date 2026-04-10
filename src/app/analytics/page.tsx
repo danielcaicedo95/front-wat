@@ -5,8 +5,7 @@ import {
     BarChart, Bar, LineChart, Line, XAxis, YAxis,
     CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
-
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { fetchWithAuth, API_URL as API } from '@/lib/fetchWithAuth';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface KPI { revenue_today: number; orders_today: number; active_users: number; conversion_rate: number; }
@@ -53,12 +52,12 @@ export default function AnalyticsPage() {
         setLoading(true);
         try {
             const [kpiRes, funnelRes, revenueRes, topRes, custRes, searchRes] = await Promise.all([
-                fetch(`${API}/analytics/kpis?tenant_id=${TENANT}`),
-                fetch(`${API}/analytics/funnel?tenant_id=${TENANT}&days=${days}`),
-                fetch(`${API}/analytics/revenue?tenant_id=${TENANT}&days=${days}`),
-                fetch(`${API}/analytics/top-products?tenant_id=${TENANT}&limit=8`),
-                fetch(`${API}/analytics/customers?tenant_id=${TENANT}&limit=20`),
-                fetch(`${API}/analytics/searches?tenant_id=${TENANT}&days=${days}`),
+                fetchWithAuth(`${API}/analytics/kpis?tenant_id=${TENANT}`),
+                fetchWithAuth(`${API}/analytics/funnel?tenant_id=${TENANT}&days=${days}`),
+                fetchWithAuth(`${API}/analytics/revenue?tenant_id=${TENANT}&days=${days}`),
+                fetchWithAuth(`${API}/analytics/top-products?tenant_id=${TENANT}&limit=8`),
+                fetchWithAuth(`${API}/analytics/customers?tenant_id=${TENANT}&limit=20`),
+                fetchWithAuth(`${API}/analytics/searches?tenant_id=${TENANT}&days=${days}`),
             ]);
             const [k, f, r, tp, c, s] = await Promise.all([
                 kpiRes.json(), funnelRes.json(), revenueRes.json(),

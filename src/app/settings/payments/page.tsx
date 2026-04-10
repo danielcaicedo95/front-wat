@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { fetchWithAuth, API_URL as API } from '@/lib/fetchWithAuth';
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 type Gateway = 'wompi' | 'mercadopago';
@@ -159,7 +158,7 @@ function GatewayCard({
     setTesting(true);
     setTestResult('');
     try {
-      const res = await fetch(`${API}/api/payments/gateways/${record.id}/test`, { method: 'POST' });
+      const res = await fetchWithAuth(`${API}/api/payments/gateways/${record.id}/test`, { method: 'POST' });
       const data = await res.json();
       setTestResult(data.message || (res.ok ? '✅ Conexión exitosa' : '❌ Error de conexión'));
     } catch {
@@ -258,7 +257,7 @@ function ConnectForm({
     setError('');
     setSaving(true);
     try {
-      const res = await fetch(`${API}/api/payments/gateways`, {
+      const res = await fetchWithAuth(`${API}/api/payments/gateways`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -420,7 +419,7 @@ export default function PaymentsPage() {
     setModeFeedback('');
     setPayMode(newMode);
     try {
-      const res = await fetch(`${API}/api/settings`, {
+      const res = await fetchWithAuth(`${API}/api/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ payment_gateway_mode: newMode }),
@@ -437,7 +436,7 @@ export default function PaymentsPage() {
   // ── Toggle activo ────────────────────────────────────────────────────────
   const handleToggle = async (id: string, newActive: boolean) => {
     setGateways((gs) => gs.map((g) => (g.id === id ? { ...g, is_active: newActive } : g)));
-    await fetch(`${API}/api/payments/gateways/${id}`, {
+    await fetchWithAuth(`${API}/api/payments/gateways/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ is_active: newActive }),
@@ -447,7 +446,7 @@ export default function PaymentsPage() {
   // ── Eliminar ─────────────────────────────────────────────────────────────
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`¿Desconectar ${name}? Se eliminarán las credenciales guardadas.`)) return;
-    await fetch(`${API}/api/payments/gateways/${id}`, { method: 'DELETE' });
+    await fetchWithAuth(`${API}/api/payments/gateways/${id}`, { method: 'DELETE' });
     setGateways((gs) => gs.filter((g) => g.id !== id));
   };
 

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react"
 import AudienceList from "./AudienceList"
+import { fetchWithAuth, API_URL } from "@/lib/fetchWithAuth"
 
 type Order = {
   id: string
@@ -54,7 +55,6 @@ export default function SalesList() {
   const [crmStageId, setCrmStageId] = useState("")
   const [sendingToCrm, setSendingToCrm] = useState(false)
   
-  const API_URL = process.env.NEXT_PUBLIC_API_URL!
 
   useEffect(() => {
     fetchOrders()
@@ -64,7 +64,7 @@ export default function SalesList() {
 
   const fetchOrders = async () => {
     try {
-      const res = await fetch(`${API_URL}/orders`)
+      const res = await fetchWithAuth(`${API_URL}/orders`)
       const data = await res.json()
       setOrders(data)
     } catch (error) {
@@ -74,7 +74,7 @@ export default function SalesList() {
 
   const fetchDrivers = async () => {
     try {
-      const res = await fetch(`${API_URL}/drivers`)
+      const res = await fetchWithAuth(`${API_URL}/drivers`)
       const data = await res.json()
       if (Array.isArray(data)) setDrivers(data)
     } catch(e){}
@@ -82,7 +82,7 @@ export default function SalesList() {
 
   const fetchCrmBoards = async () => {
     try {
-      const res = await fetch(`${API_URL}/crm/boards`)
+      const res = await fetchWithAuth(`${API_URL}/crm/boards`)
       const data = await res.json()
       if (Array.isArray(data)) setCrmBoards(data)
     } catch(e){}
@@ -93,7 +93,7 @@ export default function SalesList() {
     setCrmStageId("")
     if (!boardId) return
     try {
-      const res = await fetch(`${API_URL}/crm/boards/${boardId}/stages`)
+      const res = await fetchWithAuth(`${API_URL}/crm/boards/${boardId}/stages`)
       const data = await res.json()
       if (Array.isArray(data)) setCrmStages(data)
     } catch(e){}
@@ -108,7 +108,7 @@ export default function SalesList() {
     if (!selectedOrder || !crmBoardId || !crmStageId) return
     setSendingToCrm(true)
     try {
-      const res = await fetch(`${API_URL}/crm/deals`, {
+      const res = await fetchWithAuth(`${API_URL}/crm/deals`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -140,7 +140,7 @@ export default function SalesList() {
     
     setDispatching(true);
     try {
-      const res = await fetch(`${API_URL}/drivers/dispatch/${selectedOrder.id}`, {
+      const res = await fetchWithAuth(`${API_URL}/drivers/dispatch/${selectedOrder.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ driver_phone: driver.phone_number })

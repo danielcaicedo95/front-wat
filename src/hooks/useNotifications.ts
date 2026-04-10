@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -61,7 +62,7 @@ export function useNotifications(tenantId: string = "default") {
             });
 
             // 4. Enviar la suscripción al backend para guardarla
-            const res = await fetch(`${API_URL}/notifications/subscribe`, {
+            const res = await fetchWithAuth(`${API_URL}/notifications/subscribe`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ subscription, tenant_id: tenantId }),

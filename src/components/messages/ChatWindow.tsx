@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import { Message } from '@/app/messages/page';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -40,7 +41,7 @@ export default function ChatWindow({ messages, selectedPhone, onBack, onMessageS
     setSendError('');
 
     try {
-      const res = await fetch(`${API_URL}/messages/send`, {
+      const res = await fetchWithAuth(`${API_URL}/messages/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: selectedPhone, message: text.trim() }),

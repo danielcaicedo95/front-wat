@@ -2,8 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { fetchWithAuth, API_URL as API_BASE } from '@/lib/fetchWithAuth';
 
 type CatalogMode = 'supabase' | 'meta' | 'hybrid';
 type Tab = 'catalog' | 'messages' | 'notifications';
@@ -129,7 +128,7 @@ function MsgField({
     try {
       const form = new FormData();
       form.append('image', file);
-      const res = await fetch(`${API_BASE}/api/settings/logo`, { method: 'POST', body: form });
+      const res = await fetchWithAuth(`${API_BASE}/api/settings/logo`, { method: 'POST', body: form });
       if (res.ok) {
         const data = await res.json();
         onImageChange(data.url);
@@ -229,7 +228,7 @@ function NotificationsSection() {
   const handleTest = async () => {
     setTestLoading(true); setTestResult('');
     try {
-      const res = await fetch(`${API_BASE}/notifications/test-push`, {
+      const res = await fetchWithAuth(`${API_BASE}/notifications/test-push`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenant_id: 'default' }),
       });
@@ -344,7 +343,7 @@ export default function SettingsPage() {
     if (!settings) return;
     setSaving(true); setFeedback(null);
     try {
-      const res = await fetch(`${API_BASE}/api/settings`, {
+      const res = await fetchWithAuth(`${API_BASE}/api/settings`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       });

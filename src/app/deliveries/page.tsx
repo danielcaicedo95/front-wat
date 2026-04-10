@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from 'react'
+import { fetchWithAuth, API_URL } from '@/lib/fetchWithAuth'
 
 type Driver = {
   id: string
@@ -25,7 +26,6 @@ export default function DeliveriesPage() {
   const [countryCode, setCountryCode] = useState('+57')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [loading, setLoading] = useState(false)
-  const API_URL = process.env.NEXT_PUBLIC_API_URL!
 
   useEffect(() => {
     fetchDrivers()
@@ -33,7 +33,7 @@ export default function DeliveriesPage() {
 
   const fetchDrivers = async () => {
     try {
-      const res = await fetch(`${API_URL}/drivers`)
+      const res = await fetchWithAuth(`${API_URL}/drivers`)
       const data = await res.json()
       if (Array.isArray(data)) setDrivers(data)
     } catch (e) {
@@ -51,7 +51,7 @@ export default function DeliveriesPage() {
     const fullPhone = `${countryCode}${cleanPhone}`
 
     try {
-      const res = await fetch(`${API_URL}/drivers`, {
+      const res = await fetchWithAuth(`${API_URL}/drivers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, phone_number: fullPhone })
@@ -76,7 +76,7 @@ export default function DeliveriesPage() {
     if (!confirm(`¿Estás seguro de eliminar a ${driverName}?`)) return
     
     try {
-      const res = await fetch(`${API_URL}/drivers/${id}`, { method: 'DELETE' })
+      const res = await fetchWithAuth(`${API_URL}/drivers/${id}`, { method: 'DELETE' })
       if (res.ok) {
         fetchDrivers()
       } else {

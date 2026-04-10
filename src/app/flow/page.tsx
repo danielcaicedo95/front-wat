@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { fetchWithAuth, API_URL as API_BASE } from '@/lib/fetchWithAuth';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -408,7 +407,7 @@ export default function FlowBuilderPage() {
     useEffect(() => {
         Promise.all([
             fetch(`${API_BASE}/api/modules/available`).then((r) => r.json()),
-            fetch(`${API_BASE}/api/modules/flow?tenant_id=${TENANT_ID}`).then((r) => r.json()),
+            fetchWithAuth(`${API_BASE}/api/modules/flow?tenant_id=${TENANT_ID}`).then((r) => r.json()),
         ])
             .then(([avail, flowData]) => {
                 setAvailable(avail.modules ?? []);
@@ -479,7 +478,7 @@ export default function FlowBuilderPage() {
                     config: m.config,
                 })),
             };
-            const res = await fetch(`${API_BASE}/api/modules/flow`, {
+            const res = await fetchWithAuth(`${API_BASE}/api/modules/flow`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -502,7 +501,7 @@ export default function FlowBuilderPage() {
         setSyncing(true);
         setFeedback(null);
         try {
-            const res = await fetch(`${API_BASE}/api/settings/sync-meta-catalog`, {
+            const res = await fetchWithAuth(`${API_BASE}/api/settings/sync-meta-catalog`, {
                 method: 'POST',
             });
             const data = await res.json();

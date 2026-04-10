@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { fetchWithAuth, API_URL } from "@/lib/fetchWithAuth"
 
 type Contact = {
   id: string
@@ -24,7 +25,6 @@ type ContactDeal = {
 
 type ContactDetail = Contact & { deals: ContactDeal[] }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL!
 
 export default function ContactsDirectory() {
   const [contacts, setContacts]           = useState<Contact[]>([])
@@ -41,7 +41,7 @@ export default function ContactsDirectory() {
   const fetchContacts = async () => {
     setLoading(true)
     try {
-      const res  = await fetch(`${API_URL}/crm/contacts`)
+      const res  = await fetchWithAuth(`${API_URL}/crm/contacts`)
       const data = await res.json()
       if (Array.isArray(data)) setContacts(data)
     } catch (e) { console.error(e) }
@@ -55,7 +55,7 @@ export default function ContactsDirectory() {
     setSelected(null)
     setEditMode(false)
     try {
-      const res  = await fetch(`${API_URL}/crm/contacts/${id}`)
+      const res  = await fetchWithAuth(`${API_URL}/crm/contacts/${id}`)
       const data = await res.json()
       setSelected(data)
       setEditName(data.name || "")
@@ -69,7 +69,7 @@ export default function ContactsDirectory() {
     if (!selected) return
     setSaving(true)
     try {
-      await fetch(`${API_URL}/crm/contacts/${selected.id}`, {
+      await fetchWithAuth(`${API_URL}/crm/contacts/${selected.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: editName, email: editEmail, notes: editNotes }),
       })

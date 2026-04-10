@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { fetchWithAuth, API_URL } from "@/lib/fetchWithAuth";
 
 type AudienceSession = {
   phone_number: string;
@@ -21,7 +22,6 @@ export default function AudienceList({ type }: { type: 'abandoned' | 'leads' }) 
   const [crmStageId, setCrmStageId] = useState("");
   const [sendingToCrm, setSendingToCrm] = useState(false);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL!;
 
   useEffect(() => {
     fetchAudiences();
@@ -32,7 +32,7 @@ export default function AudienceList({ type }: { type: 'abandoned' | 'leads' }) 
     setLoading(true);
     try {
       const endpoint = type === 'abandoned' ? '/audiences/abandoned-carts' : '/audiences/leads';
-      const res = await fetch(`${API_URL}${endpoint}`);
+      const res = await fetchWithAuth(`${API_URL}${endpoint}`);
       const data = await res.json();
       setSessions(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -44,7 +44,7 @@ export default function AudienceList({ type }: { type: 'abandoned' | 'leads' }) 
 
   const fetchCrmBoards = async () => {
     try {
-      const res = await fetch(`${API_URL}/crm/boards`);
+      const res = await fetchWithAuth(`${API_URL}/crm/boards`);
       const data = await res.json();
       if (Array.isArray(data)) setCrmBoards(data);
     } catch (e) {}
@@ -55,7 +55,7 @@ export default function AudienceList({ type }: { type: 'abandoned' | 'leads' }) 
     setCrmStageId("");
     if (!boardId) return;
     try {
-      const res = await fetch(`${API_URL}/crm/boards/${boardId}/stages`);
+      const res = await fetchWithAuth(`${API_URL}/crm/boards/${boardId}/stages`);
       const data = await res.json();
       if (Array.isArray(data)) setCrmStages(data);
     } catch (e) {}
@@ -81,7 +81,7 @@ export default function AudienceList({ type }: { type: 'abandoned' | 'leads' }) 
     }
 
     try {
-      const res = await fetch(`${API_URL}/crm/deals`, {
+      const res = await fetchWithAuth(`${API_URL}/crm/deals`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

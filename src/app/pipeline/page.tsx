@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react"
 import KanbanBoard from "@/components/pipeline/KanbanBoard"
 import ContactsDirectory from "./contacts/page"
+import { fetchWithAuth, API_URL } from "@/lib/fetchWithAuth"
 
 type Board = {
   id: string
@@ -27,13 +28,12 @@ export default function PipelinePage() {
   const [creating, setCreating]           = useState(false)
   const [deletingId, setDeletingId]       = useState<string | null>(null)
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL!
 
   useEffect(() => { fetchBoards() }, [])
 
   const fetchBoards = async () => {
     try {
-      const res = await fetch(`${API_URL}/crm/boards`)
+      const res = await fetchWithAuth(`${API_URL}/crm/boards`)
       const data = await res.json()
       if (Array.isArray(data)) setBoards(data)
     } catch (e) { console.error(e) }
@@ -44,7 +44,7 @@ export default function PipelinePage() {
     if (!newName.trim()) return
     setCreating(true)
     try {
-      const res = await fetch(`${API_URL}/crm/boards`, {
+      const res = await fetchWithAuth(`${API_URL}/crm/boards`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName, description: newDesc, color: newColor }),
@@ -61,7 +61,7 @@ export default function PipelinePage() {
     if (!confirm("¿Eliminar este tablero y todos sus datos?")) return
     setDeletingId(id)
     try {
-      await fetch(`${API_URL}/crm/boards/${id}`, { method: "DELETE" })
+      await fetchWithAuth(`${API_URL}/crm/boards/${id}`, { method: "DELETE" })
       if (selectedBoard?.id === id) setSelectedBoard(null)
       fetchBoards()
     } finally { setDeletingId(null) }
