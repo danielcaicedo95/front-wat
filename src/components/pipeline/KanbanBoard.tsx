@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect, useCallback } from "react"
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd"
+import { fetchWithAuth } from "@/lib/fetchWithAuth"
 
 type Board  = { id: string; name: string; color: string }
 type Stage  = { id: string; board_id: string; name: string; order_index: number; color: string }
@@ -90,7 +91,7 @@ function BlastModal({ stage, apiUrl, onClose }: { stage: Stage; apiUrl: string; 
     if (!confirm(`¿Enviar este mensaje a todos los contactos de "${stage.name}"?`)) return
     setSending(true)
     try {
-      const res  = await fetch(`${apiUrl}/crm/stages/${stage.id}/blast`, {
+      const res  = await fetchWithAuth(`${apiUrl}/crm/stages/${stage.id}/blast`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message }),
       })
@@ -162,7 +163,7 @@ function HistoryTimeline({ dealId, apiUrl }: { dealId: string; apiUrl: string })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${apiUrl}/crm/deals/${dealId}/history`)
+    fetchWithAuth(`${apiUrl}/crm/deals/${dealId}/history`)
       .then(r => r.json())
       .then(d => { if (Array.isArray(d)) setEvents(d) })
       .finally(() => setLoading(false))
@@ -262,8 +263,8 @@ export default function KanbanBoard({ board, onBack, apiUrl }: KanbanBoardProps)
     setLoading(true)
     try {
       const [sr, dr] = await Promise.all([
-        fetch(`${apiUrl}/crm/boards/${board.id}/stages`),
-        fetch(`${apiUrl}/crm/boards/${board.id}/deals`),
+        fetchWithAuth(`${apiUrl}/crm/boards/${board.id}/stages`),
+        fetchWithAuth(`${apiUrl}/crm/boards/${board.id}/deals`),
       ])
       const s = await sr.json(); const d = await dr.json()
       if (Array.isArray(s)) setStages(s)
@@ -283,7 +284,7 @@ export default function KanbanBoard({ board, onBack, apiUrl }: KanbanBoardProps)
     const now = new Date().toISOString()
     setDeals(prev => prev.map(d => d.id === draggableId ? { ...d, stage_id: newStageId, updated_at: now } : d))
     try {
-      await fetch(`${apiUrl}/crm/deals/${draggableId}`, {
+      await fetchWithAuth(`${apiUrl}/crm/deals/${draggableId}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stage_id: newStageId }),
       })
@@ -294,7 +295,7 @@ export default function KanbanBoard({ board, onBack, apiUrl }: KanbanBoardProps)
     e.preventDefault(); if (!stageName.trim()) return
     setCreatingStage(true)
     try {
-      const res = await fetch(`${apiUrl}/crm/stages`, {
+      const res = await fetchWithAuth(`${apiUrl}/crm/stages`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ board_id: board.id, name: stageName, color: stageColor, order_index: stages.length }),
       })
@@ -304,14 +305,14 @@ export default function KanbanBoard({ board, onBack, apiUrl }: KanbanBoardProps)
 
   const handleDeleteStage = async (id: string) => {
     if (!confirm("¿Eliminar esta etapa y todos sus deals?")) return
-    await fetch(`${apiUrl}/crm/stages/${id}`, { method: "DELETE" }); fetchData()
+    await fetchWithAuth(`${apiUrl}/crm/stages/${id}`, { method: "DELETE" }); fetchData()
   }
 
   const handleCreateDeal = async (e: React.FormEvent) => {
     e.preventDefault(); if (!dealName.trim() || !addDealStageId) return
     setCreatingDeal(true)
     try {
-      const res = await fetch(`${apiUrl}/crm/deals`, {
+      const res = await fetchWithAuth(`${apiUrl}/crm/deals`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ board_id: board.id, stage_id: addDealStageId, name: dealName, phone_number: dealPhone, value: parseFloat(dealValue) || 0 }),
       })
@@ -321,7 +322,7 @@ export default function KanbanBoard({ board, onBack, apiUrl }: KanbanBoardProps)
 
   const handleDeleteDeal = async (id: string) => {
     if (!confirm("¿Eliminar este deal?")) return
-    await fetch(`${apiUrl}/crm/deals/${id}`, { method: "DELETE" })
+    await fetchWithAuth(`${apiUrl}/crm/deals/${id}`, { method: "DELETE" })
     setSelectedDeal(null); fetchData()
   }
 
@@ -329,7 +330,7 @@ export default function KanbanBoard({ board, onBack, apiUrl }: KanbanBoardProps)
     if (!selectedDeal) return
     setSavingDeal(true)
     try {
-      await fetch(`${apiUrl}/crm/deals/${selectedDeal.id}`, {
+      await fetchWithAuth(`${apiUrl}/crm/deals/${selectedDeal.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notes: editNotes, value: parseFloat(editValue) || 0 }),
       })
@@ -347,7 +348,7 @@ export default function KanbanBoard({ board, onBack, apiUrl }: KanbanBoardProps)
     if (!confirm("¿Marcar este pedido como Entregado? Se moverá a la etapa final.")) return
     setActionLoading("delivered")
     try {
-      const res = await fetch(`${apiUrl}/crm/deals/${selectedDeal.id}/mark-delivered`, { method: "POST" })
+      const res = await fetchWithAuth(`${apiUrl}/crm/deals/${selectedDeal.id}/mark-delivered`, { method: "POST" })
       if (res.ok) { setSelectedDeal(null); fetchData() }
       else { alert("Error al marcar como entregado.") }
     } finally { setActionLoading(null) }
@@ -358,7 +359,7 @@ export default function KanbanBoard({ board, onBack, apiUrl }: KanbanBoardProps)
     if (!confirm("¿Mover a Cancelado / Devolución? El valor del deal se pondrá en $0 para no afectar las métricas de ingresos.")) return
     setActionLoading("cancelled")
     try {
-      const res = await fetch(`${apiUrl}/crm/deals/${selectedDeal.id}/mark-cancelled`, { method: "POST" })
+      const res = await fetchWithAuth(`${apiUrl}/crm/deals/${selectedDeal.id}/mark-cancelled`, { method: "POST" })
       if (res.ok) { setSelectedDeal(null); fetchData() }
       else { alert("Error al cancelar el deal.") }
     } finally { setActionLoading(null) }
