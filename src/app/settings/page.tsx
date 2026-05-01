@@ -296,7 +296,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('catalog');
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/settings`)
+    fetchWithAuth(`${API_BASE}/api/settings`)
       .then((r) => r.json())
       .then((data) => {
         const s = data.settings || {};

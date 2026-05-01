@@ -82,7 +82,7 @@ export default function ContactsDirectory() {
   const handleDelete = async () => {
     if (!selected) return
     if (!confirm(`¿Eliminar a ${selected.name} del directorio? Los deals quedarán sin contacto vinculado.`)) return
-    await fetch(`${API_URL}/crm/contacts/${selected.id}`, { method: "DELETE" })
+    await fetchWithAuth(`${API_URL}/crm/contacts/${selected.id}`, { method: "DELETE" })
     setSelected(null)
     fetchContacts()
   }

@@ -406,7 +406,7 @@ export default function FlowBuilderPage() {
     // Load available modules + current flow
     useEffect(() => {
         Promise.all([
-            fetch(`${API_BASE}/api/modules/available`).then((r) => r.json()),
+            fetchWithAuth(`${API_BASE}/api/modules/available`).then((r) => r.json()),
             fetchWithAuth(`${API_BASE}/api/modules/flow?tenant_id=${TENANT_ID}`).then((r) => r.json()),
         ])
             .then(([avail, flowData]) => {

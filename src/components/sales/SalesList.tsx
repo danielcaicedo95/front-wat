@@ -195,7 +195,7 @@ export default function SalesList() {
   const updateStatus = async (ids: string[], status: string) => {
     if (!ids.length) return;
     try {
-      await fetch(`${API_URL}/orders/bulk-status`, {
+      await fetchWithAuth(`${API_URL}/orders/bulk-status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ order_ids: ids, status })

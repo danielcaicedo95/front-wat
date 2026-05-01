@@ -394,8 +394,8 @@ export default function PaymentsPage() {
     setLoading(true);
     try {
       const [gwRes, settingsRes] = await Promise.all([
-        fetch(`${API}/api/payments/gateways`),
-        fetch(`${API}/api/settings`),
+        fetchWithAuth(`${API}/api/payments/gateways`),
+        fetchWithAuth(`${API}/api/settings`),
       ]);
       if (gwRes.ok) {
         const data = await gwRes.json();

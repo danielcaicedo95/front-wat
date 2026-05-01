@@ -128,7 +128,7 @@ export default function HomePage() {
 
   // ── Load settings ─────────────────────────────────────────────────────────
   useEffect(() => {
-    fetch(`${API_BASE}/api/settings`)
+    fetchWithAuth(`${API_BASE}/api/settings`)
       .then((r) => r.json())
       .then((data) => {
         const s = data.settings || {};
