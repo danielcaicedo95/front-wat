@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react"
 import AudienceList from "./AudienceList"
 import { fetchWithAuth, API_URL } from "@/lib/fetchWithAuth"
+import { useOrderApproval } from "@/hooks/useOrderApproval"
 
 type Order = {
   id: string
@@ -36,7 +37,11 @@ const renderTextWithLinksAndBreaks = (text: string) => {
 export default function SalesList() {
   const [orders, setOrders] = useState<Order[]>([])
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-  const [activeTab, setActiveTab] = useState<'confirmed' | 'pending' | 'abandoned' | 'leads'>('confirmed')
+  const [activeTab, setActiveTab] = useState<'confirmed' | 'pending' | 'approval' | 'abandoned' | 'leads'>('confirmed')
+  const [pendingApprovalOrders, setPendingApprovalOrders] = useState<Order[]>([])
+  const [rejectReason, setRejectReason] = useState("")
+  const [showRejectModal, setShowRejectModal] = useState(false)
+  const { loading: approvalLoading, approveOrder, rejectOrder } = useOrderApproval()
   
   // CRM States
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set())
@@ -60,7 +65,18 @@ export default function SalesList() {
     fetchOrders()
     fetchDrivers()
     fetchCrmBoards()
+    fetchPendingApproval()
   }, [])
+
+  const fetchPendingApproval = async () => {
+    try {
+      const res = await fetchWithAuth(`${API_URL}/orders/pending-approval`)
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data)) setPendingApprovalOrders(data)
+      }
+    } catch (e) { console.error("Error fetching pending approval orders:", e) }
+  }
 
   const fetchOrders = async () => {
     try {
@@ -158,10 +174,10 @@ export default function SalesList() {
   }
 
   // Filtrado por Tabs
-  const filteredOrders = orders.filter(o => 
-    activeTab === 'pending' 
+  const filteredOrders = orders.filter(o =>
+    activeTab === 'pending'
       ? o.status === 'awaiting_payment'
-      : o.status !== 'awaiting_payment'
+      : o.status !== 'awaiting_payment' && o.status !== 'pending_owner'
   );
 
   // Paginación
@@ -282,6 +298,21 @@ export default function SalesList() {
             Pendientes (Checkout) ⏳
           </button>
           <button
+            onClick={() => { setActiveTab('approval'); setCurrentPage(1); setSelectedOrderIds(new Set()); fetchPendingApproval(); }}
+            className={`flex-1 px-3 py-2 text-sm font-bold rounded-lg transition-all whitespace-nowrap relative ${
+              activeTab === 'approval' 
+                ? 'bg-white text-purple-700 shadow-sm border border-gray-200' 
+                : 'text-gray-500 hover:text-black hover:bg-gray-200'
+            }`}
+          >
+            Por Aprobar 🔔
+            {pendingApprovalOrders.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                {pendingApprovalOrders.length}
+              </span>
+            )}
+          </button>
+          <button
             onClick={() => { setActiveTab('abandoned'); }}
             className={`flex-1 px-3 py-2 text-sm font-bold rounded-lg transition-all whitespace-nowrap ${
               activeTab === 'abandoned' 
@@ -325,7 +356,56 @@ export default function SalesList() {
       </div>
 
       {activeTab === 'abandoned' || activeTab === 'leads' ? (
-        <AudienceList type={activeTab} />
+        <AudienceList type={activeTab === 'leads' ? 'leads' : 'abandoned'} />
+      ) : activeTab === 'approval' ? (
+        /* ── TAB POR APROBAR ─────────────────────────────────────────────── */
+        <div className="space-y-3 mt-4">
+          {pendingApprovalOrders.length === 0 ? (
+            <div className="bg-gray-50 rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 text-black font-medium text-lg">
+              🎉 No hay pedidos pendientes de aprobación en este momento.
+            </div>
+          ) : (
+            pendingApprovalOrders.map(order => (
+              <div key={order.id} className="bg-white rounded-2xl border-2 border-purple-200 shadow-sm p-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-purple-400 transition-all">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-black text-gray-900">{order.name}</span>
+                    <span className="text-xs bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded-full border border-purple-200">⏳ En revisión</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">{order.phone_number} · {new Date(order.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</p>
+                  <p className="text-sm font-bold text-gray-700 mt-1">{order.products?.map((p: any) => `${p.quantity}x ${p.name}`).join(', ')}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-black text-gray-900 text-lg">${order.total.toLocaleString()}</span>
+                  <button
+                    onClick={() => setSelectedOrder(order)}
+                    className="text-xs text-gray-500 hover:text-gray-800 underline"
+                  >Ver ficha</button>
+                  <button
+                    disabled={approvalLoading}
+                    onClick={async () => {
+                      const ok = await approveOrder(order.id)
+                      if (ok) {
+                        setPendingApprovalOrders(prev => prev.filter(o => o.id !== order.id))
+                        setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'pending' } : o))
+                      } else { alert('Error al aprobar el pedido') }
+                    }}
+                    className="bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black px-4 py-2 rounded-xl text-sm transition-all shadow disabled:opacity-50"
+                  >
+                    ✅ Aceptar
+                  </button>
+                  <button
+                    disabled={approvalLoading}
+                    onClick={() => { setSelectedOrder(order); setShowRejectModal(true) }}
+                    className="bg-white border-2 border-red-200 text-red-600 hover:bg-red-50 active:scale-95 font-black px-4 py-2 rounded-xl text-sm transition-all shadow-sm disabled:opacity-50"
+                  >
+                    ❌ Rechazar
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       ) : filteredOrders.length === 0 ? (
         <div className="bg-gray-50 rounded-2xl p-8 text-center border-2 border-dashed border-gray-200 text-black font-medium text-lg mt-4">
           {activeTab === 'pending' 
@@ -618,7 +698,39 @@ export default function SalesList() {
                   ${selectedOrder.total.toLocaleString()}
                 </span>
               </div>
+              </div>
             </div>
+
+            {/* Botones de Aprobación (solo visibles si el pedido está en revisión) */}
+            {selectedOrder.status === 'pending_owner' && (
+              <div className="bg-purple-50 border-t-2 border-purple-200 px-6 py-4 flex flex-wrap items-center gap-3 shrink-0">
+                <div className="flex-1">
+                  <p className="text-xs text-purple-800 font-black uppercase tracking-wider">⏳ Esperando tu revisión</p>
+                  <p className="text-xs text-purple-600 font-medium mt-0.5">El cliente ya fue notificado que está en revisión.</p>
+                </div>
+                <button
+                  disabled={approvalLoading}
+                  onClick={async () => {
+                    const ok = await approveOrder(selectedOrder.id)
+                    if (ok) {
+                      setPendingApprovalOrders(prev => prev.filter(o => o.id !== selectedOrder.id))
+                      setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'pending' } : o))
+                      setSelectedOrder({ ...selectedOrder, status: 'pending' })
+                    } else { alert('Error al aprobar el pedido') }
+                  }}
+                  className="bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black px-6 py-2.5 rounded-xl text-sm transition-all shadow disabled:opacity-50"
+                >
+                  {approvalLoading ? 'Procesando...' : '✅ Aceptar Pedido'}
+                </button>
+                <button
+                  disabled={approvalLoading}
+                  onClick={() => setShowRejectModal(true)}
+                  className="bg-white border-2 border-red-300 text-red-600 hover:bg-red-50 active:scale-95 font-black px-6 py-2.5 rounded-xl text-sm transition-all shadow-sm disabled:opacity-50"
+                >
+                  ❌ Rechazar
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -691,6 +803,62 @@ export default function SalesList() {
                   className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-colors disabled:opacity-50"
                 >
                   {sendingToCrm ? "Enviando..." : "Enviar ✓"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: RECHAZO CON MOTIVO */}
+      {showRejectModal && selectedOrder && (
+        <div
+          className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowRejectModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-black text-black mb-1">❌ Rechazar Pedido</h3>
+            <p className="text-sm text-gray-500 mb-5 font-medium">
+              Pedido de: <span className="font-bold text-black">{selectedOrder.name}</span>
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-1.5">
+                  Motivo del rechazo (opcional)
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={e => setRejectReason(e.target.value)}
+                  placeholder="Ej: Producto agotado, zona no cubierta..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-red-400 outline-none text-black font-medium resize-none"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowRejectModal(false); setRejectReason("") }}
+                  className="flex-1 py-3 rounded-xl border-2 border-gray-200 font-bold text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  disabled={approvalLoading}
+                  onClick={async () => {
+                    const ok = await rejectOrder(selectedOrder.id, rejectReason || undefined)
+                    if (ok) {
+                      setPendingApprovalOrders(prev => prev.filter(o => o.id !== selectedOrder.id))
+                      setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'cancelled' } : o))
+                      setSelectedOrder(null)
+                      setShowRejectModal(false)
+                      setRejectReason("")
+                    } else { alert('Error al rechazar el pedido') }
+                  }}
+                  className="flex-1 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black transition-colors disabled:opacity-50"
+                >
+                  {approvalLoading ? 'Procesando...' : 'Confirmar Rechazo'}
                 </button>
               </div>
             </div>
