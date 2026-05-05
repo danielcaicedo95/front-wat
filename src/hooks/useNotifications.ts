@@ -34,6 +34,30 @@ export function useNotifications(tenantId: string = "default") {
                 setSubscribed(!!sub);
             });
         });
+
+        // ── Listener para mensajes del Service Worker ────────────────────────
+        const handleSWMessage = (event: MessageEvent) => {
+            // 1. SW_NAVIGATE: el SW nos pide navegar (fallback cuando client.navigate() falla)
+            if (event.data?.type === "SW_NAVIGATE") {
+                const url = event.data.url || "/sales";
+                window.location.href = url;
+            }
+
+            // 2. GET_API_CREDENTIALS: el SW nos pide las credenciales del API
+            //    para poder llamar al endpoint de aprobación sin hardcodearlas
+            if (event.data?.type === "GET_API_CREDENTIALS" && event.ports?.[0]) {
+                event.ports[0].postMessage({
+                    apiUrl: API_URL,
+                    apiKey: process.env.NEXT_PUBLIC_DASHBOARD_API_KEY || "",
+                });
+            }
+        };
+
+        navigator.serviceWorker.addEventListener("message", handleSWMessage);
+        return () => {
+            navigator.serviceWorker.removeEventListener("message", handleSWMessage);
+        };
+        // ────────────────────────────────────────────────────────────────────
     }, []);
 
     const subscribe = async (): Promise<boolean> => {

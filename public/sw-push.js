@@ -129,13 +129,15 @@ self.addEventListener('notificationclick', function (event) {
                 }
 
                 // Navegar al dashboard sin importar si el fetch tuvo éxito
+                // ⚠️ IMPORTANTE: siempre usar URL absoluta en SW
+                const approvalUrl = self.location.origin + '/sales';
                 for (const client of clientList) {
-                    if (client.url.includes(self.location.origin) && 'focus' in client) {
-                        client.navigate('/sales');
+                    if ('focus' in client) {
+                        try { await client.navigate(approvalUrl); } catch (_) {}
                         return client.focus();
                     }
                 }
-                if (clients.openWindow) return clients.openWindow('/sales');
+                if (clients.openWindow) return clients.openWindow(approvalUrl);
             })()
         );
         return;
@@ -145,16 +147,29 @@ self.addEventListener('notificationclick', function (event) {
     if (action === 'dismiss') return;
 
     // ── Acción view / tap en el cuerpo: navegar al dashboard ─────────────────
-    const targetUrl = url || '/sales';
+    // ⚠️ IMPORTANTE: clients.openWindow() requiere URL absoluta en todos los browsers
+    const relPath = (url && url.startsWith('/')) ? url : '/sales';
+    const absoluteUrl = self.location.origin + relPath;
+
     event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clientList) => {
+            // 1. Si ya hay una pestaña abierta del dashboard → navegar y enfocar
             for (const client of clientList) {
-                if (client.url.includes(self.location.origin) && 'focus' in client) {
-                    client.navigate(targetUrl);
+                if ('focus' in client) {
+                    try {
+                        await client.navigate(absoluteUrl);
+                    } catch (_) {
+                        // client.navigate puede fallar en algunos browsers — en ese caso
+                        // el cliente recibirá un postMessage para navegar él mismo
+                        client.postMessage({ type: 'SW_NAVIGATE', url: relPath });
+                    }
                     return client.focus();
                 }
             }
-            if (clients.openWindow) return clients.openWindow(targetUrl);
+            // 2. Si no hay ninguna pestaña abierta → abrir una nueva
+            if (clients.openWindow) {
+                return clients.openWindow(absoluteUrl);
+            }
         })
     );
 });
