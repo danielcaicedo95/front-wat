@@ -698,7 +698,6 @@ export default function SalesList() {
                   ${selectedOrder.total.toLocaleString()}
                 </span>
               </div>
-              </div>
             </div>
 
             {/* Botones de Aprobación (solo visibles si el pedido está en revisión) */}
