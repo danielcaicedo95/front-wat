@@ -85,46 +85,29 @@ self.addEventListener('notificationclick', function (event) {
     if (requiresApproval && orderId && (action === 'approve' || action === 'reject')) {
         event.waitUntil(
             (async () => {
-                // Intentar leer API URL y key desde una pestaña abierta del dashboard
-                const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-                let apiUrl = null;
-                let apiKey = null;
-
-                for (const client of clientList) {
-                    // Pedir las credenciales al cliente vía postMessage y esperar respuesta
-                    try {
-                        const credentials = await new Promise((resolve) => {
-                            const channel = new MessageChannel();
-                            channel.port1.onmessage = (e) => resolve(e.data);
-                            client.postMessage({ type: 'GET_API_CREDENTIALS' }, [channel.port2]);
-                            setTimeout(() => resolve(null), 1500); // timeout 1.5s
-                        });
-                        if (credentials && credentials.apiUrl) {
-                            apiUrl = credentials.apiUrl;
-                            apiKey = credentials.apiKey;
-                            break;
-                        }
-                    } catch (e) {}
-                }
-
+                // 1. Obtener la URL del backend desde el payload (ahora la inyecta notifications.py)
+                const apiUrl = notifData.apiUrl || 'https://watbot-backend.onrender.com';
+                
+                // 2. Hacer la llamada en background para aprobar/rechazar
                 if (apiUrl && orderId) {
                     try {
                         await fetch(`${apiUrl}/orders/${orderId}/review`, {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
-                                ...(apiKey ? { 'X-API-Key': apiKey } : {}),
+                                'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({ action, tenant_id: 'default' }),
                         });
-                        // Actualizar el badge en pestañas abiertas
+                        
+                        // 3. Avisar a las pestañas abiertas (si las hay) para actualizar la UI
+                        const clientList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
                         clientList.forEach(c => c.postMessage({
                             type: 'ORDER_REVIEWED',
                             orderId,
                             action,
                         }));
                     } catch (e) {
-                        console.error('[SW] Error enviando revisión:', e);
+                        console.error('[SW] Error enviando revisión en background:', e);
                     }
                 }
 
