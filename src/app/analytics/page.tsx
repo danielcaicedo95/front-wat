@@ -23,16 +23,25 @@ function formatCOP(n: number | undefined | null) {
 
 function KpiCard({ label, value, sub, icon }: { label: string; value: string; sub?: string; icon: string }) {
     return (
-        <div className="bg-white rounded-2xl shadow p-4 sm:p-5 flex items-start gap-3 min-w-0">
-            <span className="text-2xl flex-shrink-0">{icon}</span>
-            <div className="min-w-0 flex-1">
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide truncate">{label}</p>
-                <p className="text-lg sm:text-2xl font-bold text-gray-800 mt-0.5 truncate">{value}</p>
-                {sub && <p className="text-xs text-gray-400 mt-0.5 truncate">{sub}</p>}
+        <div className="bg-white rounded-2xl shadow p-4 flex items-center gap-3">
+            <span className="text-3xl flex-shrink-0">{icon}</span>
+            <div className="flex-1">
+                <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest leading-tight">{label}</p>
+                <p className="text-xl font-bold text-gray-800 leading-tight mt-0.5">{value}</p>
+                {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
             </div>
         </div>
     );
 }
+
+const STEP_COLORS = [
+    { bar: '#6366f1', bg: '#eef2ff', text: '#4338ca' }, // sesiones - indigo
+    { bar: '#8b5cf6', bg: '#f5f3ff', text: '#7c3aed' }, // búsquedas - violet
+    { bar: '#ec4899', bg: '#fdf2f8', text: '#be185d' }, // vistos - pink
+    { bar: '#f97316', bg: '#fff7ed', text: '#c2410c' }, // carrito - orange
+    { bar: '#eab308', bg: '#fefce8', text: '#a16207' }, // checkout - yellow
+    { bar: '#10b981', bg: '#ecfdf5', text: '#065f46' }, // compras - emerald
+];
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AnalyticsPage() {
@@ -111,7 +120,7 @@ export default function AnalyticsPage() {
             {!loading && (
                 <>
                     {/* KPIs */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                         <KpiCard label="Ingresos hoy" value={formatCOP(kpis.revenue_today)} icon="💰" />
                         <KpiCard label="Pedidos hoy" value={String(kpis.orders_today)} icon="📦" />
                         <KpiCard label="Usuarios activos" value={String(kpis.active_users)} sub="sesiones del día" icon="👥" />
@@ -141,20 +150,43 @@ export default function AnalyticsPage() {
 
                         {/* Funnel */}
                         <div className="bg-white rounded-2xl shadow p-5">
-                            <h2 className="font-semibold text-gray-800 mb-4">Embudo de conversión</h2>
-                            <div className="space-y-2">
+                            <h2 className="font-semibold text-gray-800 mb-5">Embudo de conversión</h2>
+                            <div className="space-y-3">
                                 {funnel.map((step, i) => {
-                                    const pct = funnel[0]?.count > 0 ? Math.round((step.count / funnel[0].count) * 100) : 0;
+                                    const maxCount = funnel[0]?.count || 1;
+                                    const pct = maxCount > 0 ? Math.max(2, Math.round((step.count / maxCount) * 100)) : 2;
+                                    const color = STEP_COLORS[i] || STEP_COLORS[0];
                                     return (
                                         <div key={step.step}>
-                                            <div className="flex justify-between text-xs text-gray-500 mb-0.5">
-                                                <span>{step.label}</span>
-                                                <span className="font-medium text-gray-700">{(step.count ?? 0).toLocaleString()}{step.conversion_from_prev !== undefined && ` · ${step.conversion_from_prev}% desde anterior`}</span>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span
+                                                        className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+                                                        style={{ backgroundColor: color.bar }}
+                                                    />
+                                                    <span className="text-xs font-medium text-gray-600">{step.label}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs">
+                                                    <span
+                                                        className="font-bold px-1.5 py-0.5 rounded"
+                                                        style={{ color: color.text, backgroundColor: color.bg }}
+                                                    >
+                                                        {(step.count ?? 0).toLocaleString()}
+                                                    </span>
+                                                    {step.conversion_from_prev !== undefined && (
+                                                        <span className="text-gray-400">
+                                                            {step.conversion_from_prev}%
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
+                                            <div className="bg-gray-100 rounded-full h-2.5 overflow-hidden">
                                                 <div
-                                                    className="h-3 rounded-full transition-all duration-500"
-                                                    style={{ width: `${pct}%`, backgroundColor: FUNNEL_COLORS[i] || '#6366f1' }}
+                                                    className="h-2.5 rounded-full transition-all duration-700"
+                                                    style={{
+                                                        width: `${step.count === 0 ? 0 : pct}%`,
+                                                        background: `linear-gradient(90deg, ${color.bar}cc, ${color.bar})`,
+                                                    }}
                                                 />
                                             </div>
                                         </div>
