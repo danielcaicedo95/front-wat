@@ -23,12 +23,12 @@ function formatCOP(n: number | undefined | null) {
 
 function KpiCard({ label, value, sub, icon }: { label: string; value: string; sub?: string; icon: string }) {
     return (
-        <div className="bg-white rounded-2xl shadow p-5 flex items-start gap-4">
-            <span className="text-3xl">{icon}</span>
-            <div>
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{label}</p>
-                <p className="text-2xl font-bold text-gray-800 mt-0.5">{value}</p>
-                {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+        <div className="bg-white rounded-2xl shadow p-4 sm:p-5 flex items-start gap-3 min-w-0">
+            <span className="text-2xl flex-shrink-0">{icon}</span>
+            <div className="min-w-0 flex-1">
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide truncate">{label}</p>
+                <p className="text-lg sm:text-2xl font-bold text-gray-800 mt-0.5 truncate">{value}</p>
+                {sub && <p className="text-xs text-gray-400 mt-0.5 truncate">{sub}</p>}
             </div>
         </div>
     );
@@ -41,7 +41,7 @@ export default function AnalyticsPage() {
 
     const [kpis, setKpis] = useState<KPI>({ revenue_today: 0, orders_today: 0, active_users: 0, conversion_rate: 0 });
     const [funnel, setFunnel] = useState<FunnelStep[]>([]);
-    const [revenue, setRevenue] = useState<{ data: RevenueDay[]; total: number; total_orders: number; avg_order_value: number }>({ data: [], total: 0, total_orders: 0, avg_order_value: 0 });
+    const [revenue, setRevenue] = useState<{ data: RevenueDay[]; total_revenue: number; total_orders: number; avg_order_value: number }>({ data: [], total_revenue: 0, total_orders: 0, avg_order_value: 0 });
     const [topProducts, setTopProducts] = useState<Product[]>([]);
     const [customers, setCustomers] = useState<{ customers: Customer[]; summary: { total: number; new: number; returning: number } }>({ customers: [], summary: { total: 0, new: 0, returning: 0 } });
     const [searches, setSearches] = useState<{ performance: { success_rate: number; total_searches: number; avg_response_time_ms: number }; failed_searches: FailedSearch[] }>({ performance: { success_rate: 0, total_searches: 0, avg_response_time_ms: 0 }, failed_searches: [] });
@@ -125,7 +125,7 @@ export default function AnalyticsPage() {
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <h2 className="font-semibold text-gray-800">Ingresos — últimos {days} días</h2>
-                                    <p className="text-xs text-gray-400">{formatCOP(revenue?.total)} total · {revenue?.total_orders ?? 0} pedidos · ticket promedio {formatCOP(revenue?.avg_order_value)}</p>
+                                    <p className="text-xs text-gray-400">{formatCOP(revenue?.total_revenue)} total · {revenue?.total_orders ?? 0} pedidos · ticket promedio {formatCOP(revenue?.avg_order_value)}</p>
                                 </div>
                             </div>
                             <ResponsiveContainer width="100%" height={200}>
