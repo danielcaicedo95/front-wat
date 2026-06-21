@@ -185,8 +185,11 @@ export function buildEscPosReceipt(order: PrintOrder, config: PrinterConfig, cop
 }
 
 // ─── Web Serial API ────────────────────────────────────────────────────────
+// Nota: SerialPort no está en las definiciones estándar de TypeScript.
+// Usamos `any` para evitar errores de compilación con Vercel/Next.js.
 
-let _port: SerialPort | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _port: any = null;
 
 export function isWebSerialSupported(): boolean {
   return typeof navigator !== 'undefined' && 'serial' in navigator;
@@ -212,7 +215,7 @@ export async function connectSerialPrinter(): Promise<{ ok: boolean; error?: str
 
 export function disconnectSerialPrinter(): void {
   if (_port) {
-    try { _port.close(); } catch (_) {}
+    try { _port.close(); } catch (_e) {}
     _port = null;
   }
 }
@@ -223,7 +226,8 @@ export function isSerialConnected(): boolean {
 
 async function writeToSerial(data: Uint8Array): Promise<void> {
   if (!_port || !_port.writable) throw new Error('Puerto serial no conectado.');
-  const writer = _port.writable.getWriter();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const writer: any = _port.writable.getWriter();
   try {
     await writer.write(data);
   } finally {
