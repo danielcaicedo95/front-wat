@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import AudienceList from "./AudienceList"
 import { fetchWithAuth, API_URL } from "@/lib/fetchWithAuth"
 import { useOrderApproval } from "@/hooks/useOrderApproval"
+import { usePrinter } from "@/hooks/usePrinter"
 
 type Order = {
   id: string
@@ -42,6 +43,7 @@ export default function SalesList() {
   const [rejectReason, setRejectReason] = useState("")
   const [showRejectModal, setShowRejectModal] = useState(false)
   const { loading: approvalLoading, approveOrder, rejectOrder } = useOrderApproval()
+  const { print: printTicket, config: printerConfig, printing: isPrinting } = usePrinter()
   
   // CRM States
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set())
@@ -382,17 +384,18 @@ export default function SalesList() {
                     className="text-xs text-gray-500 hover:text-gray-800 underline"
                   >Ver ficha</button>
                   <button
-                    disabled={approvalLoading}
+                    disabled={approvalLoading || isPrinting}
                     onClick={async () => {
                       const ok = await approveOrder(order.id)
                       if (ok) {
                         setPendingApprovalOrders(prev => prev.filter(o => o.id !== order.id))
                         setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'pending' } : o))
+                        if (printerConfig.autoprint) await printTicket(order)
                       } else { alert('Error al aprobar el pedido') }
                     }}
                     className="bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black px-4 py-2 rounded-xl text-sm transition-all shadow disabled:opacity-50"
                   >
-                    ✅ Aceptar
+                    {isPrinting ? '🖨️ Imprimiendo...' : '✅ Aceptar'}
                   </button>
                   <button
                     disabled={approvalLoading}
@@ -691,6 +694,16 @@ export default function SalesList() {
                 >
                   📋 Pipeline
                 </button>
+                <button
+                  onClick={() => printTicket(selectedOrder)}
+                  disabled={isPrinting}
+                  className="bg-gray-800 hover:bg-gray-900 active:scale-95 disabled:opacity-50 transition-all px-3 py-2.5 rounded-xl font-bold shadow-sm text-sm text-white flex items-center gap-1.5"
+                  title="Imprimir ticket del pedido"
+                >
+                  {isPrinting
+                    ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />Imprimiendo</>
+                    : '🖨️ Imprimir'}
+                </button>
               </div>
               
               <div className="text-right ml-auto bg-gray-900 px-5 py-2.5 rounded-xl shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)]">
@@ -708,18 +721,19 @@ export default function SalesList() {
                   <p className="text-xs text-purple-600 font-medium mt-0.5">El cliente ya fue notificado que está en revisión.</p>
                 </div>
                 <button
-                  disabled={approvalLoading}
+                  disabled={approvalLoading || isPrinting}
                   onClick={async () => {
                     const ok = await approveOrder(selectedOrder.id)
                     if (ok) {
                       setPendingApprovalOrders(prev => prev.filter(o => o.id !== selectedOrder.id))
                       setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'pending' } : o))
                       setSelectedOrder({ ...selectedOrder, status: 'pending' })
+                      if (printerConfig.autoprint) await printTicket(selectedOrder)
                     } else { alert('Error al aprobar el pedido') }
                   }}
                   className="bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black px-6 py-2.5 rounded-xl text-sm transition-all shadow disabled:opacity-50"
                 >
-                  {approvalLoading ? 'Procesando...' : '✅ Aceptar Pedido'}
+                  {isPrinting ? '🖨️ Imprimiendo...' : approvalLoading ? 'Procesando...' : '✅ Aceptar Pedido'}
                 </button>
                 <button
                   disabled={approvalLoading}

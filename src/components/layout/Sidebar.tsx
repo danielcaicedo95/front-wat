@@ -15,6 +15,7 @@ const navLinks = [
   { name: '🚴 Deliveries', href: '/deliveries' },
   { name: '⚡ Flow Builder', href: '/flow' },
   { name: '💳 Pagos', href: '/settings/payments' },
+  { name: '🖨️ Impresora', href: '/settings/printer' },
   { name: '⚙️ Settings', href: '/settings' },
 ];
 
