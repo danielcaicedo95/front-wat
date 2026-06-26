@@ -218,28 +218,34 @@ export async function autoConnectSerialPrinter(): Promise<{ ok: boolean; error?:
     return { ok: false, error: 'Web Serial no disponible.' };
   }
   if (isSerialConnected()) {
+    console.log('[PRINTER] autoConnect: ya conectado, reutilizando puerto');
     return { ok: true }; // Ya conectado
   }
   try {
     // getPorts() devuelve los puertos previamente autorizados — SIN DIÁLOGO
     const ports = await (navigator as any).serial.getPorts();
+    console.log('[PRINTER] autoConnect: getPorts() retornó', ports.length, 'puerto(s)');
     if (!ports || ports.length === 0) {
-      return { ok: false, error: 'No hay impresora autorizada. Conéctala desde Configuración.' };
+      return { ok: false, error: 'No hay impresora autorizada. Ve a Configuración y haz clic en "Conectar impresora USB".' };
     }
-    // Usar el primer puerto autorizado (en la práctica suele haber solo 1)
     _port = ports[0];
-    // Si ya está abierto (otra pestaña lo abrió), lo usamos tal cual
+    // Si ya está abierto, lo reutilizamos
     if (_port.readable) {
+      console.log('[PRINTER] autoConnect: puerto ya abierto, reutilizando');
       return { ok: true };
     }
-    await _port.open({ baudRate: 9600 });
+    console.log('[PRINTER] autoConnect: abriendo puerto a 115200 baud...');
+    await _port.open({ baudRate: 115200 });
+    console.log('[PRINTER] autoConnect: puerto abierto exitosamente');
     return { ok: true };
   } catch (e: any) {
-    _port = null;
-    // "InvalidStateError" = puerto ya abierto en otra pestaña → consideramos conectado
+    console.warn('[PRINTER] autoConnect error:', e?.name, e?.message);
+    // "InvalidStateError" = puerto ya abierto (mismo proceso u otra pestaña)
     if (e?.name === 'InvalidStateError') {
+      console.log('[PRINTER] autoConnect: puerto ya estaba abierto (InvalidStateError), considerándolo conectado');
       return { ok: true };
     }
+    _port = null;
     return { ok: false, error: e?.message || 'No se pudo reconectar la impresora.' };
   }
 }
@@ -253,14 +259,66 @@ export async function connectSerialPrinter(): Promise<{ ok: boolean; error?: str
   if (!isWebSerialSupported()) {
     return { ok: false, error: 'Web Serial API no está disponible. Usa Chrome o Edge.' };
   }
+  // Si ya hay un puerto abierto, no volver a pedir — usarlo directamente
+  if (isSerialConnected()) {
+    console.log('[PRINTER] connect: ya hay un puerto abierto, reutilizándolo');
+    return { ok: true };
+  }
   try {
+    console.log('[PRINTER] connect: solicitando puerto via requestPort()...');
     _port = await (navigator as any).serial.requestPort();
-    await _port.open({ baudRate: 9600 });
+    console.log('[PRINTER] connect: usuario seleccionó puerto, abriendo...');
+    await _port.open({ baudRate: 115200 });
+    console.log('[PRINTER] connect: puerto abierto en 115200 baud');
     return { ok: true };
   } catch (e: any) {
+    console.warn('[PRINTER] connect error:', e?.name, e?.message);
+    if (e?.name === 'NotFoundError') {
+      _port = null;
+      return { ok: false, error: 'No seleccionaste ningún puerto. Si no aparece ninguno, instala el driver CH340.' };
+    }
+    if (e?.name === 'InvalidStateError') {
+      // El puerto ya estaba abierto desde una sesión anterior
+      console.log('[PRINTER] connect: puerto ya estaba abierto, reutilizando');
+      return { ok: true };
+    }
     _port = null;
-    if (e?.name === 'NotFoundError') return { ok: false, error: 'No seleccionaste ningún puerto.' };
     return { ok: false, error: e?.message || 'Error al conectar la impresora.' };
+  }
+}
+
+/**
+ * Retorna información de diagnóstico sobre la impresora.
+ * Útil para mostrar en la UI y debuggear problemas.
+ */
+export async function getPrinterDiagnosticInfo(): Promise<{
+  webSerialSupported: boolean;
+  authorizedPorts: number;
+  isConnected: boolean;
+  portInfo?: string;
+}> {
+  const supported = isWebSerialSupported();
+  if (!supported) {
+    return { webSerialSupported: false, authorizedPorts: 0, isConnected: false };
+  }
+  try {
+    const ports = await (navigator as any).serial.getPorts();
+    const connected = isSerialConnected();
+    let portInfo: string | undefined;
+    if (ports.length > 0) {
+      try {
+        const info = await ports[0].getInfo();
+        portInfo = `USB ${info.usbVendorId?.toString(16) ?? '?'}:${info.usbProductId?.toString(16) ?? '?'}`;
+      } catch (_) {}
+    }
+    return {
+      webSerialSupported: true,
+      authorizedPorts: ports.length,
+      isConnected: connected,
+      portInfo,
+    };
+  } catch (e) {
+    return { webSerialSupported: true, authorizedPorts: 0, isConnected: false };
   }
 }
 

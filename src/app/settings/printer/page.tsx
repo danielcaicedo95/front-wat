@@ -5,8 +5,9 @@
  * 3 opciones: activar impresora, cuántas copias, conectar + test.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePrinter } from '@/hooks/usePrinter';
+import { getPrinterDiagnosticInfo } from '@/lib/printer';
 
 const COPY_OPTIONS = [
   { value: 1, label: '1 copia', sub: 'Solo para el cliente' },
@@ -28,15 +29,26 @@ export default function PrinterSettingsPage() {
 
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [diag, setDiag] = useState<{ webSerialSupported: boolean; authorizedPorts: number; isConnected: boolean; portInfo?: string } | null>(null);
+
+  const refreshDiag = async () => {
+    const info = await getPrinterDiagnosticInfo();
+    setDiag(info);
+  };
+
+  useEffect(() => {
+    refreshDiag();
+  }, [isConnected]);
 
   const handleConnect = async () => {
     setConnecting(true);
     setTestMsg(null);
     const result = await connect();
     setConnecting(false);
+    await refreshDiag();
     setTestMsg({
       ok: result.ok,
-      text: result.ok ? '✅ Impresora conectada' : `❌ ${result.error || 'No se pudo conectar'}`,
+      text: result.ok ? '✅ Impresora conectada y lista para imprimir' : `❌ ${result.error || 'No se pudo conectar'}`,
     });
   };
 
@@ -290,6 +302,38 @@ export default function PrinterSettingsPage() {
           <em>Conectar impresora</em> y selecciona el puerto COM que aparezca. Si no aparece ningún puerto,
           instala el driver <strong>CH340</strong> (incluido en el CD de la impresora).
         </p>
+
+        {/* ── Panel de Diagnóstico ── */}
+        {diag && (
+          <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-slate-600 font-bold text-xs uppercase tracking-wider">🛠️ Diagnóstico del Sistema</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500">API Soportada:</span>
+                <span className="font-bold text-slate-700">{diag.webSerialSupported ? 'Sí ✅' : 'No ❌'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500">Puertos Guardados:</span>
+                <span className="font-bold text-slate-700">{diag.authorizedPorts}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500">Estado Serial:</span>
+                <span className="font-bold text-slate-700">{diag.isConnected ? 'Conectado 🟢' : 'Desconectado 🔴'}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-1">
+                <span className="text-slate-500">Info Dispositivo:</span>
+                <span className="font-bold text-slate-700">{diag.portInfo || 'N/A'}</span>
+              </div>
+            </div>
+            {diag.authorizedPorts === 0 && diag.webSerialSupported && (
+              <div className="mt-3 text-[11px] text-orange-700 bg-orange-50 p-2 rounded-lg border border-orange-100">
+                ⚠️ Chrome no tiene permisos para usar la impresora aún. Haz clic en "Conectar impresora USB". Si no aparece ninguna opción en la lista emergente, <strong>tienes que instalar el driver USB-Serial (CH340)</strong>.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Vista previa del ticket ───────────────────────────────────── */}
