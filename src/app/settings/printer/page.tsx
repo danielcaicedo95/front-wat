@@ -230,20 +230,68 @@ export default function PrinterSettingsPage() {
         </div>
       </div>
 
-      {/* ── 4. Conexión USB ───────────────────────────────────────────── */}
+      {/* ── 4. Modo de Conexión ───────────────────────────────────────────── */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">🔌</span>
-            <div>
-              <h2 className="font-black text-gray-900">Conexión con la impresora</h2>
-              <p className="text-xs text-gray-500">
-                {serialSupported
-                  ? 'Conexión USB directa — solo Chrome/Edge'
-                  : '⚠️ Tu navegador no soporta USB directo. Usa Chrome o Edge.'}
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xl">⚙️</span>
+          <div>
+            <h2 className="font-black text-gray-900">Modo de Conexión</h2>
+            <p className="text-xs text-gray-500">¿Cómo está instalada tu impresora?</p>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <button
+            onClick={() => saveConfig({ mode: 'css' })}
+            className={`text-left p-4 rounded-2xl border-2 transition-all ${
+              config.mode === 'css'
+                ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className={`font-black ${config.mode === 'css' ? 'text-indigo-700' : 'text-gray-900'}`}>
+                🖨️ Impresora de Windows
+              </span>
+              {config.mode === 'css' && <span className="text-indigo-500">✅</span>}
+            </div>
+            <p className="text-xs text-gray-500">Usa la cola de impresión normal del sistema (POS-80C). Abre el diálogo de Chrome.</p>
+          </button>
+
+          <button
+            onClick={() => saveConfig({ mode: 'serial' })}
+            className={`text-left p-4 rounded-2xl border-2 transition-all ${
+              config.mode === 'serial'
+                ? 'border-indigo-500 bg-indigo-50 shadow-sm'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className={`font-black ${config.mode === 'serial' ? 'text-indigo-700' : 'text-gray-900'}`}>
+                🔌 USB Directo (Serial)
+              </span>
+              {config.mode === 'serial' && <span className="text-indigo-500">✅</span>}
+            </div>
+            <p className="text-xs text-gray-500">Imprime directo sin diálogos. Requiere driver CH340 y puerto COM.</p>
+          </button>
+        </div>
+      </div>
+
+      {/* ── 5. Conexión USB (Solo si el modo es Serial) ─────────────────── */}
+      {config.mode === 'serial' && (
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">🔌</span>
+              <div>
+                <h2 className="font-black text-gray-900">Conexión Web Serial</h2>
+                <p className="text-xs text-gray-500">
+                  {serialSupported
+                    ? 'Conexión directa — solo Chrome/Edge'
+                    : '⚠️ Tu navegador no soporta USB directo.'}
+                </p>
+              </div>
+            </div>
 
           {/* Indicador de estado */}
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold border ${
@@ -335,8 +383,9 @@ export default function PrinterSettingsPage() {
           </div>
         )}
       </div>
+      )}
 
-      {/* ── Vista previa del ticket ───────────────────────────────────── */}
+      {/* ── 6. Vista previa del ticket ───────────────────────────────────── */}
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
         <div className="flex items-center gap-3">
           <span className="text-xl">👁️</span>
