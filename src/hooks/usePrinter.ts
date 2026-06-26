@@ -24,6 +24,7 @@ import {
   printOrder,
   connectSerialPrinter,
   disconnectSerialPrinter,
+  autoConnectSerialPrinter,
   isSerialConnected,
   isWebSerialSupported,
 } from '@/lib/printer';
@@ -42,7 +43,15 @@ export function usePrinter() {
 
   // Cargar config desde localStorage al montar
   useEffect(() => {
-    setConfigState(loadPrinterConfig());
+    const cfg = loadPrinterConfig();
+    setConfigState(cfg);
+    // Autoconectar en background si la impresora ya fue autorizada previamente.
+    // Así cuando el usuario apruebe un pedido, ya hay conexión lista (sin diálogos).
+    if (isWebSerialSupported()) {
+      autoConnectSerialPrinter().then(result => {
+        if (result.ok) setIsConnected(true);
+      });
+    }
   }, []);
 
   // Sincronizar estado de conexión

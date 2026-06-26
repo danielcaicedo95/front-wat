@@ -42,8 +42,19 @@ export default function SalesList() {
   const [pendingApprovalOrders, setPendingApprovalOrders] = useState<Order[]>([])
   const [rejectReason, setRejectReason] = useState("")
   const [showRejectModal, setShowRejectModal] = useState(false)
+  const [printError, setPrintError] = useState<string | null>(null)
   const { loading: approvalLoading, approveOrder, rejectOrder } = useOrderApproval()
   const { print: printTicket, config: printerConfig, printing: isPrinting } = usePrinter()
+
+  // Helper: imprimir con feedback de error visible
+  const handlePrint = async (order: Order) => {
+    const result = await printTicket(order)
+    if (!result.ok) {
+      const msg = result.error || 'No se pudo imprimir. Verifica la conexión USB.'
+      setPrintError(msg)
+      setTimeout(() => setPrintError(null), 6000)
+    }
+  }
   
   // CRM States
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(new Set())
@@ -266,6 +277,22 @@ export default function SalesList() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
+
+      {/* TOAST: Error de impresora */}
+      {printError && (
+        <div className="fixed bottom-6 right-6 z-[9999] max-w-sm bg-orange-600 text-white text-sm font-bold px-5 py-3.5 rounded-2xl shadow-2xl flex items-start gap-3 animate-in slide-in-from-bottom-2 duration-300">
+          <span className="text-xl">🖨️</span>
+          <div>
+            <p className="font-black">Error de impresora</p>
+            <p className="font-medium mt-0.5 opacity-90">{printError}</p>
+            <a href="/settings/printer" className="underline text-orange-100 text-xs mt-1 inline-block">
+              Ir a Configuración de Impresora →
+            </a>
+          </div>
+          <button onClick={() => setPrintError(null)} className="ml-auto text-orange-200 hover:text-white text-lg leading-none">×</button>
+        </div>
+      )}
+
       {/* HEADER CRM */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-6 border-b-2 border-gray-200 pb-4 gap-4">
         <div>
@@ -390,7 +417,7 @@ export default function SalesList() {
                       if (ok) {
                         setPendingApprovalOrders(prev => prev.filter(o => o.id !== order.id))
                         setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'pending' } : o))
-                        if (printerConfig.autoprint) await printTicket(order)
+                        if (printerConfig.autoprint) await handlePrint(order)
                       } else { alert('Error al aprobar el pedido') }
                     }}
                     className="bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black px-4 py-2 rounded-xl text-sm transition-all shadow disabled:opacity-50"
@@ -695,7 +722,7 @@ export default function SalesList() {
                   📋 Pipeline
                 </button>
                 <button
-                  onClick={() => printTicket(selectedOrder)}
+                  onClick={() => handlePrint(selectedOrder)}
                   disabled={isPrinting}
                   className="bg-gray-800 hover:bg-gray-900 active:scale-95 disabled:opacity-50 transition-all px-3 py-2.5 rounded-xl font-bold shadow-sm text-sm text-white flex items-center gap-1.5"
                   title="Imprimir ticket del pedido"
@@ -728,7 +755,7 @@ export default function SalesList() {
                       setPendingApprovalOrders(prev => prev.filter(o => o.id !== selectedOrder.id))
                       setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'pending' } : o))
                       setSelectedOrder({ ...selectedOrder, status: 'pending' })
-                      if (printerConfig.autoprint) await printTicket(selectedOrder)
+                      if (printerConfig.autoprint) await handlePrint(selectedOrder)
                     } else { alert('Error al aprobar el pedido') }
                   }}
                   className="bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black px-6 py-2.5 rounded-xl text-sm transition-all shadow disabled:opacity-50"

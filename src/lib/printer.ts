@@ -196,8 +196,58 @@ export function isWebSerialSupported(): boolean {
 }
 
 /**
- * Conecta al puerto serial. Abre el diálogo de selección si no hay uno guardado.
- * Guarda el puerto para reutilizarlo en la misma sesión.
+ * Verifica si hay un puerto serial abierto y funcional.
+ */
+export function isSerialConnected(): boolean {
+  try {
+    return _port !== null && _port.readable !== null && !_port.readable.locked;
+  } catch (_e) {
+    _port = null;
+    return false;
+  }
+}
+
+/**
+ * AutoConnect — intenta reconectar a un puerto ya autorizado sin mostrar diálogo.
+ * Usa navigator.serial.getPorts() que solo devuelve puertos que el usuario ya aprobó.
+ * Llama esto al iniciar la app para que la impresora ya esté lista cuando se apruebe un pedido.
+ * Retorna { ok: true } si logró conectar, { ok: false } si no hay puerto autorizado aún.
+ */
+export async function autoConnectSerialPrinter(): Promise<{ ok: boolean; error?: string }> {
+  if (!isWebSerialSupported()) {
+    return { ok: false, error: 'Web Serial no disponible.' };
+  }
+  if (isSerialConnected()) {
+    return { ok: true }; // Ya conectado
+  }
+  try {
+    // getPorts() devuelve los puertos previamente autorizados — SIN DIÁLOGO
+    const ports = await (navigator as any).serial.getPorts();
+    if (!ports || ports.length === 0) {
+      return { ok: false, error: 'No hay impresora autorizada. Conéctala desde Configuración.' };
+    }
+    // Usar el primer puerto autorizado (en la práctica suele haber solo 1)
+    _port = ports[0];
+    // Si ya está abierto (otra pestaña lo abrió), lo usamos tal cual
+    if (_port.readable) {
+      return { ok: true };
+    }
+    await _port.open({ baudRate: 9600 });
+    return { ok: true };
+  } catch (e: any) {
+    _port = null;
+    // "InvalidStateError" = puerto ya abierto en otra pestaña → consideramos conectado
+    if (e?.name === 'InvalidStateError') {
+      return { ok: true };
+    }
+    return { ok: false, error: e?.message || 'No se pudo reconectar la impresora.' };
+  }
+}
+
+/**
+ * Conecta al puerto serial mostrando el diálogo de selección del sistema.
+ * Solo llamar esto cuando el usuario explícitamente quiere elegir una impresora
+ * (ej: botón "Conectar impresora" en Configuración).
  */
 export async function connectSerialPrinter(): Promise<{ ok: boolean; error?: string }> {
   if (!isWebSerialSupported()) {
@@ -205,9 +255,10 @@ export async function connectSerialPrinter(): Promise<{ ok: boolean; error?: str
   }
   try {
     _port = await (navigator as any).serial.requestPort();
-    await _port!.open({ baudRate: 9600 });
+    await _port.open({ baudRate: 9600 });
     return { ok: true };
   } catch (e: any) {
+    _port = null;
     if (e?.name === 'NotFoundError') return { ok: false, error: 'No seleccionaste ningún puerto.' };
     return { ok: false, error: e?.message || 'Error al conectar la impresora.' };
   }
@@ -218,10 +269,6 @@ export function disconnectSerialPrinter(): void {
     try { _port.close(); } catch (_e) {}
     _port = null;
   }
-}
-
-export function isSerialConnected(): boolean {
-  return _port !== null && _port.readable !== null;
 }
 
 async function writeToSerial(data: Uint8Array): Promise<void> {
@@ -353,11 +400,18 @@ function printCssReceipt(order: PrintOrder, config: PrinterConfig, copies: numbe
 
 // ─── Función principal de impresión ────────────────────────────────────────
 
-const COPY_LABELS = ['🍴 COCINA', '🧾 CLIENTE'];
+const COPY_LABELS = ['🍴 COCINA', '🧾 CLIENTE', '📋 ADMIN'];
 
 /**
  * printOrder — Punto de entrada principal.
  * Imprime el pedido según la configuración guardada.
+ *
+ * Comportamiento:
+ *  - Modo 'css': abre window.print() siempre.
+ *  - Modo 'serial': intenta autoconectar (sin diálogo) si no hay conexión.
+ *    Si no hay puerto autorizado → retorna { ok: false } SIN fallback CSS.
+ *    El caller decide si mostrar un mensaje de error al usuario.
+ *
  * Retorna { ok, error } para que el caller pueda mostrar feedback.
  */
 export async function printOrder(
@@ -366,28 +420,33 @@ export async function printOrder(
 ): Promise<{ ok: boolean; error?: string }> {
   const config = { ...loadPrinterConfig(), ...configOverride };
 
+  // ── Modo CSS: fallback universal, siempre disponible ──────────────────────
   if (config.mode === 'css') {
-    // Modo CSS: simple, universal, no requiere permisos
     printCssReceipt(order, config, config.copies);
     return { ok: true };
   }
 
-  // Modo Serial: ESC/POS
+  // ── Modo Serial (ESC/POS) ─────────────────────────────────────────────────
   if (!isWebSerialSupported()) {
-    // Fallback automático a CSS
-    printCssReceipt(order, config, config.copies);
-    return { ok: true, error: 'Web Serial no disponible — imprimiendo con modo CSS.' };
+    return {
+      ok: false,
+      error: 'Tu navegador no soporta impresión directa. Usa Chrome o Edge, o cambia el modo a CSS en Configuración.',
+    };
   }
 
+  // Si no hay conexión activa, intentar autoconectar SIN mostrar diálogo
   if (!isSerialConnected()) {
-    const conn = await connectSerialPrinter();
-    if (!conn.ok) {
-      // Si el usuario canceló la conexión, intentar CSS como fallback
-      printCssReceipt(order, config, config.copies);
-      return { ok: true, error: `Sin conexión serial — imprimiendo con CSS. (${conn.error})` };
+    const auto = await autoConnectSerialPrinter();
+    if (!auto.ok) {
+      // No hay puerto autorizado → el usuario debe ir a Configuración > Impresora
+      return {
+        ok: false,
+        error: auto.error || 'Impresora no conectada. Ve a Configuración > Impresora y conecta primero.',
+      };
     }
   }
 
+  // Imprimir todas las copias
   try {
     for (let i = 0; i < config.copies; i++) {
       const label = COPY_LABELS[i] ?? `📄 COPIA ${i + 1}`;
@@ -398,9 +457,9 @@ export async function printOrder(
     }
     return { ok: true };
   } catch (e: any) {
-    // Si falla el serial, fallback a CSS
-    console.error('[PRINTER] Error ESC/POS, fallback a CSS:', e);
-    printCssReceipt(order, config, config.copies);
-    return { ok: true, error: 'Error serial — imprimiendo con CSS.' };
+    // Error al escribir — la impresora puede haberse desconectado
+    _port = null; // Marcar como desconectado para que el próximo intento re-autoconnecte
+    console.error('[PRINTER] Error ESC/POS:', e);
+    return { ok: false, error: `Error al imprimir: ${e?.message || 'revisa la conexión USB.'}` };
   }
 }
