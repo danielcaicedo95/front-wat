@@ -44,7 +44,7 @@ export default function SalesList() {
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [printError, setPrintError] = useState<string | null>(null)
   const { loading: approvalLoading, approveOrder, rejectOrder } = useOrderApproval()
-  const { print: printTicket, config: printerConfig, printing: isPrinting } = usePrinter()
+  const { print: printTicket, config: printerConfig, printing: isPrinting, testPrint } = usePrinter()
 
   // Helper: imprimir con feedback de error visible
   const handlePrint = async (order: Order) => {
@@ -296,9 +296,19 @@ export default function SalesList() {
       {/* HEADER CRM */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-6 border-b-2 border-gray-200 pb-4 gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-black border-l-4 border-indigo-500 pl-3">
-            CRM de Ventas
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-3xl font-bold text-black border-l-4 border-indigo-500 pl-3">
+              CRM de Ventas
+            </h2>
+            <button
+              onClick={() => testPrint()}
+              disabled={isPrinting}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 font-bold px-3 py-1.5 rounded-xl text-xs transition-all shadow-sm flex items-center gap-1.5 active:scale-95 disabled:opacity-50"
+              title="Hacer una impresión de prueba"
+            >
+              <span>🖨️</span> Probar Impresora
+            </button>
+          </div>
           <p className="text-sm font-medium text-gray-500 mt-2">
             Gestiona tus pedidos. Total histórico: {orders.length}
           </p>

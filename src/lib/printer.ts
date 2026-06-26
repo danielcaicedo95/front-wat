@@ -348,22 +348,20 @@ function buildHtmlReceipt(order: PrintOrder, config: PrinterConfig, copyLabel: s
   });
   const orderId = order.id.slice(-6).toUpperCase();
   const totalFmt = `$${order.total.toLocaleString('es-CO')}`;
-  const paperW = config.paperWidth === 80 ? '280px' : '200px';
-
   const productRows = order.products.map(p => `
     <tr>
-      <td style="padding:5px 0;font-size:13px">
+      <td style="padding:5px 0;font-size:13px;word-break:break-word;vertical-align:top;">
         🛒 <strong>${p.name}</strong>
         ${p.notes ? `<br/><span style="font-size:11px;color:#666;padding-left:20px">→ ${p.notes}</span>` : ''}
       </td>
-      <td style="text-align:right;padding:5px 0;font-size:13px">
+      <td style="text-align:right;padding:5px 0 5px 10px;font-size:13px;white-space:nowrap;vertical-align:top;">
         <span style="background:#e5e7eb;border:1px solid #d1d5db;padding:2px 8px;border-radius:6px;font-weight:900">× ${p.quantity}</span>
       </td>
     </tr>
   `).join('');
 
   return `
-    <div style="font-family:Arial,sans-serif;width:${paperW};margin:0 auto;padding:8px;font-size:12px;color:#111">
+    <div style="font-family:Arial,sans-serif;width:100%;box-sizing:border-box;margin:0 auto;padding:4px;font-size:12px;color:#111">
 
       <!-- ENCABEZADO -->
       <div style="text-align:center;padding:8px 0 6px;border-bottom:2px solid #111">
@@ -438,9 +436,10 @@ function printCssReceipt(order: PrintOrder, config: PrinterConfig, copies: numbe
       <head>
         <title>Recibo</title>
         <style>
-          body { margin: 0; padding: 8px; }
+          * { box-sizing: border-box; }
+          body { margin: 0; padding: 0; width: ${config.paperWidth === 80 ? '72mm' : '48mm'}; margin: 0 auto; }
           @media print {
-            body { margin: 0; padding: 0; }
+            body { width: 100%; margin: 0; padding: 0; }
             @page { margin: 4mm; size: ${config.paperWidth}mm auto; }
           }
         </style>
