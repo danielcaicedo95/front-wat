@@ -361,7 +361,7 @@ function buildHtmlReceipt(order: PrintOrder, config: PrinterConfig, copyLabel: s
   `).join('');
 
   return `
-    <div style="font-family:Arial,sans-serif;width:100%;box-sizing:border-box;margin:0 auto;padding:4px;font-size:12px;color:#111">
+    <div class="ticket-container" style="font-family:Arial,sans-serif;padding:0 8px 8px 0;font-size:12px;color:#000">
 
       <!-- ENCABEZADO -->
       <div style="text-align:center;padding:8px 0 6px;border-bottom:2px solid #111">
@@ -407,9 +407,9 @@ function buildHtmlReceipt(order: PrintOrder, config: PrinterConfig, copyLabel: s
             <div style="font-size:11px;font-weight:900;color:#666;letter-spacing:1px;text-transform:uppercase">Método de Pago</div>
             <div style="font-size:13px;font-weight:900">${order.payment_method}</div>
           </div>
-          <div style="background:#111;padding:6px 12px;border-radius:8px;text-align:right">
-            <div style="font-size:10px;color:#9ca3af;font-weight:bold;letter-spacing:1px">TOTAL</div>
-            <div style="font-size:20px;font-weight:900;color:#4ade80">${totalFmt}</div>
+          <div style="background:#000;padding:6px 10px;border-radius:6px;text-align:right">
+            <div style="font-size:10px;color:#ddd;font-weight:bold;letter-spacing:1px">TOTAL</div>
+            <div style="font-size:18px;font-weight:900;color:#fff">${totalFmt}</div>
           </div>
         </div>
       </div>
@@ -437,10 +437,15 @@ function printCssReceipt(order: PrintOrder, config: PrinterConfig, copies: numbe
         <title>Recibo</title>
         <style>
           * { box-sizing: border-box; }
-          body { margin: 0; padding: 0; width: ${config.paperWidth === 80 ? '72mm' : '48mm'}; margin: 0 auto; }
+          body { margin: 0; padding: 0; background: #fff; }
+          .ticket-container {
+            width: 100%;
+            max-width: ${config.paperWidth === 80 ? '250px' : '170px'};
+            margin: 0; /* Alinear a la izquierda para impresoras térmicas */
+          }
           @media print {
-            body { width: 100%; margin: 0; padding: 0; }
-            @page { margin: 4mm; size: ${config.paperWidth}mm auto; }
+            @page { margin: 0; }
+            body { margin: 0; padding: 0; }
           }
         </style>
       </head>
